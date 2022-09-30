@@ -1,0 +1,18 @@
+node_modules
+.env
+.openzeppelin
+.vscode
+coverage
+coverage.json
+typechain
+typechain-types
+test
+deploy
+deployments
+contracts/mocks
+scripts
+
+#Hardhat files
+cache
+artifacts
+
