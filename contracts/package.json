@@ -1,0 +1,26 @@
+{
+  "name": "@royaldao/royaldao-contracts",
+  "version": "1.0.1",
+  "description": "Contracts from RoyalDAO",
+  "repository": {
+    "url": "https://github.com/RoyalDAO/royaldao-contracts/",
+    "type": "git"
+  },
+  "keywords": [
+    "Governance",
+    "DAO",
+    "Senate",
+    "NFT"
+  ],
+  "homepage": "https://github.com/RoyalDAO/royaldao-contracts",
+  "bugs": "https://github.com/RoyalDAO/royaldao-contracts",
+  "files": [
+    "contracts/Governance/*.sol",
+    "contracts/Governance/compatibility/*.sol",
+    "contracts/Governance/extensions/*.sol",
+    "contracts/Governance/utils/*.sol",
+    "contracts/Token/ERC721/extensions/*.sol"
+  ],
+  "author": "Vin Rodrigues <rodrigues.mvinicius@gmail.com>",
+  "license": "MIT"
+}
