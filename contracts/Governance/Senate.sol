@@ -3,7 +3,6 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 import "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
@@ -186,9 +185,7 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         ) {
             if (!tokens.contains(_token)) tokens.add(address(_token));
         } else if (
-            IERC165(_token).supportsInterface(
-                type(IVotesUpgradeable).interfaceId
-            )
+            IERC165(_token).supportsInterface(type(IVotes).interfaceId)
         ) {
             if (!oldDogsTokens.contains(_token))
                 oldDogsTokens.add(address(_token));

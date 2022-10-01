@@ -644,9 +644,11 @@
     solidity-ast "^0.4.15"
 
 "@royaldao/contracts-upgradeable@^1.0.16":
-  version "1.0.16"
-  resolved "https://registry.yarnpkg.com/@royaldao/contracts-upgradeable/-/contracts-upgradeable-1.0.16.tgz#fb1327fc86c3399d268e71f967adc4370c892177"
-  integrity sha512-Ux2oXVz+1pW4aKxw1E5WMVr9F/nyw/ykrcragte964rcBTE1stY6W4yiH/x2sKJzd8LNknnVEie2aHRkndf/aQ==
+  version "1.0.19"
+  resolved "https://registry.yarnpkg.com/@royaldao/contracts-upgradeable/-/contracts-upgradeable-1.0.19.tgz#fee15ccf310f08bac4f9d45d230ccdd56d62444f"
+  integrity sha512-kSXfxiD6/9E/VFKPBS2RQIYDPke+8x4c0hoBACMM/RFJgduSnlKJRosni2SC7uH3FwSEsNjs9nWUBUd9tJI68Q==
+  dependencies:
+    "@openzeppelin/contracts-upgradeable" "^4.7.3"
 
 "@scure/base@~1.1.0":
   version "1.1.1"
