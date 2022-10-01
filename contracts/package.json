@@ -1,6 +1,6 @@
 {
   "name": "@royaldao/contracts",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Contracts from RoyalDAO",
   "repository": {
     "url": "https://github.com/RoyalDAO/royaldao-contracts/",
@@ -19,7 +19,8 @@
     "Governance/compatibility/*.sol",
     "Governance/extensions/*.sol",
     "Governance/utils/*.sol",
-    "Token/ERC721/extensions/*.sol"
+    "Token/ERC721/extensions/*.sol",
+    "Utils/*.sol"
   ],
   "author": "Vin Rodrigues <rodrigues.mvinicius@gmail.com>",
   "license": "MIT",
