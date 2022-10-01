@@ -1,5 +1,5 @@
 {
-  "name": "@royaldao/royaldao-contracts",
+  "name": "@royaldao/contracts",
   "version": "1.0.1",
   "description": "Contracts from RoyalDAO",
   "repository": {
@@ -15,12 +15,15 @@
   "homepage": "https://github.com/RoyalDAO/royaldao-contracts",
   "bugs": "https://github.com/RoyalDAO/royaldao-contracts",
   "files": [
-    "contracts/Governance/*.sol",
-    "contracts/Governance/compatibility/*.sol",
-    "contracts/Governance/extensions/*.sol",
-    "contracts/Governance/utils/*.sol",
-    "contracts/Token/ERC721/extensions/*.sol"
+    "Governance/*.sol",
+    "Governance/compatibility/*.sol",
+    "Governance/extensions/*.sol",
+    "Governance/utils/*.sol",
+    "Token/ERC721/extensions/*.sol"
   ],
   "author": "Vin Rodrigues <rodrigues.mvinicius@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.7.3"
+  }
 }

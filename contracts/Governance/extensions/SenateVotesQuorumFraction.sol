@@ -4,9 +4,10 @@
 pragma solidity ^0.8.0;
 
 import "../Senate.sol";
-import "@openzeppelin/contracts/utils/Checkpoints.sol";
+
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "../../Utils/Checkpoints.sol";
 
 /**
  * @dev Extension of {Chancelor} for voting weight extraction from an {ERC20Votes} token and a quorum expressed as a
