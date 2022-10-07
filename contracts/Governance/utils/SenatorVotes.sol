@@ -2,9 +2,11 @@
 // OpenZeppelin Contracts (last updated v4.6.0) (governance/utils/Votes.sol)
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./ISenatorVotes.sol";
 import "../../Governance/ISenate.sol";
 import "../../Utils/Checkpoints.sol";
@@ -30,6 +32,9 @@ import "../../Utils/Checkpoints.sol";
  * _Available since v4.5._
  */
 abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
+    using EnumerableSet for EnumerableSet.AddressSet;
+    using Strings for uint256;
+
     constructor(ISenate _senate) {
         senate = _senate;
     }
@@ -47,6 +52,9 @@ abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
     Checkpoints.History private _totalCheckpoints;
 
     mapping(address => Counters.Counter) private _nonces;
+
+    mapping(address => uint256) private senatorVotes;
+    EnumerableSet.AddressSet internal senators;
 
     /**
      * @dev Returns the current amount of votes that `account` has.
@@ -194,20 +202,29 @@ abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
         address to,
         uint256 amount
     ) private {
+        bool fromStillSenator;
+
         if (from != to && amount > 0) {
             if (from != address(0)) {
                 (uint256 oldValue, uint256 newValue) = _delegateCheckpoints[
                     from
                 ].push(_subtract, amount);
+
+                fromStillSenator = newValue > 0;
+                if (senators.contains(from) && newValue <= 0)
+                    senators.remove(from);
+
                 emit DelegateVotesChanged(from, oldValue, newValue);
             }
             if (to != address(0)) {
                 (uint256 oldValue, uint256 newValue) = _delegateCheckpoints[to]
                     .push(_add, amount);
+
                 emit DelegateVotesChanged(to, oldValue, newValue);
             }
             //update senate books
-            senate.transferVotingUnits(from, to, amount);
+            if (address(senate) != address(0))
+                senate.transferVotingUnits(from, to, amount, fromStillSenator);
         }
     }
 
@@ -259,5 +276,27 @@ abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
      */
     function getSenateAddress() external view returns (address) {
         return address(senate);
+    }
+
+    /**
+     * @dev Returns snapshot of senator votes
+     */
+    function getSenateSnapshot()
+        external
+        view
+        returns (senateSnapshot[] memory)
+    {
+        senateSnapshot[] memory snapshot = new senateSnapshot[](
+            senators.length()
+        );
+
+        for (uint256 idx = 0; idx < senators.length(); idx++) {
+            snapshot[idx] = senateSnapshot({
+                senator: senators.at(idx),
+                votes: _delegateCheckpoints[senators.at(idx)].latest()
+            });
+        }
+
+        return snapshot;
     }
 }

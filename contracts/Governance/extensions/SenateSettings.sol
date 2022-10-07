@@ -62,7 +62,7 @@ abstract contract SenateSettings is Senate {
         return _proposalThreshold;
     }
 
-    function getSettings()
+    function getSettings(address account)
         external
         view
         virtual
@@ -70,10 +70,16 @@ abstract contract SenateSettings is Senate {
         returns (
             uint256 currProposalThreshold,
             uint256 currVotingDelay,
-            uint256 currVotingPeriod
+            uint256 currVotingPeriod,
+            address[] memory senatorRepresentations
         )
     {
-        return (_proposalThreshold, _votingDelay, _votingPeriod);
+        return (
+            _proposalThreshold,
+            _votingDelay,
+            _votingPeriod,
+            _getRepresentation(account)
+        );
     }
 
     /**

@@ -15,6 +15,15 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * Modified by QueenE DAO.
  */
 abstract contract ISenate is IERC165 {
+    event NewDeputyInTown(address newDeputy, uint256 mandateEndsAtBlock);
+    event DeputyResignation(address deputy, uint256 resignedAt);
+
+    event MemberQuarantined(address member);
+    event SenatorQuarantined(address senator);
+
+    event MemberBanned(address member);
+    event SenatorBanned(address senator);
+
     enum membershipStatus {
         NOT_MEMBER,
         ACTIVE_MEMBER,
@@ -24,13 +33,13 @@ abstract contract ISenate is IERC165 {
 
     /**
      * @notice module:core
-     * @dev Name of the governor instance (used in building the ERC712 domain separator).
+     * @dev Name of the senate instance (used in building the ERC712 domain separator).
      */
     function name() public view virtual returns (string memory);
 
     /**
      * @notice module:core
-     * @dev Version of the governor instance (used in building the ERC712 domain separator). Default: "1"
+     * @dev Version of the senate instance (used in building the ERC712 domain separator). Default: "1"
      */
     function version() public view virtual returns (string memory);
 
@@ -59,12 +68,33 @@ abstract contract ISenate is IERC165 {
      */
     function quorum(uint256 blockNumber) public view virtual returns (uint256);
 
+    function changeDeputyMarshal(address _newMarshalInTown) external virtual;
+
     /**
      * @dev Update Senate Voting Books.
      */
     function transferVotingUnits(
         address from,
         address to,
-        uint256 amount
+        uint256 amount,
+        bool isSenator
     ) external virtual;
+
+    /**
+     * @dev Check if all members from list are valid.
+     */
+    function validateMembers(address[] calldata members)
+        external
+        view
+        virtual
+        returns (bool);
+
+    /**
+     * @dev Check if senator is active.
+     */
+    function validateSenator(address senator)
+        public
+        view
+        virtual
+        returns (bool);
 }

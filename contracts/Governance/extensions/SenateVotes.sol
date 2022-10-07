@@ -11,11 +11,8 @@ import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "../../Utils/Checkpoints.sol";
 
 /**
- * @dev Extension of {Governor} for voting weight extraction from an {ERC20Votes} token, or since v4.5 an {ERC721Votes} token.
+ * @dev Extension of {Senate} for voting weight extraction from an {ERC721Votes} token.
  *
- * _Available since v4.3._
- *
- * @custom:storage-size 51
  */
 abstract contract SenateVotes is Senate {
     //TODO: Complex votes for single vote by token
@@ -27,19 +24,16 @@ abstract contract SenateVotes is Senate {
     bytes32 private constant _DELEGATION_TYPEHASH =
         keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
-    mapping(address => Checkpoints.History) private _delegateCheckpoints;
-    Checkpoints.History private _totalCheckpoints;
+    mapping(address => Checkpoints.History) internal _senateBooksCheckpoints;
+    Checkpoints.History internal _totalSenateBooksCheckpoints;
+    //checkpoints by senator
+    //mapping(address => mapping(address => Checkpoints.History))
+    //    internal _senateBooksByMemberCheckpoints;
+    //senator representations
+    mapping(address => EnumerableSet.AddressSet)
+        internal _senatorRepresentations;
 
-    mapping(address => Counters.Counter) private _nonces;
-
-    /**
-     * @dev Emitted when an account changes their delegate.
-     */
-    event SenateBooksDelegateChanged(
-        address indexed delegator,
-        address indexed fromDelegate,
-        address indexed toDelegate
-    );
+    mapping(address => Counters.Counter) internal _nonces;
 
     /**
      * @dev Emitted when a token transfer or delegate change results in changes to a delegate's number of votes.
@@ -52,7 +46,10 @@ abstract contract SenateVotes is Senate {
     );
 
     /**
-     * Read the voting weight from the token's built in snapshot mechanism (see {Chancelor-_getVotes}).
+     * @dev Read the voting weight from the senate's built in snapshot mechanism.
+     * @dev For members that dont implement the SenatorVotes, make a external call to get the voting weight.
+     * @dev Quarantined Senators get voting weight zeroed for the duration of quarantine. Banned Senator get no voting weight forever.
+     * @dev For members that dont implement the SenatorVotes, quarantine members give no voting weight for the duration of quarantine. Banned Member gets no voting weight forever.
      */
     function _getVotes(
         address account,
@@ -61,14 +58,20 @@ abstract contract SenateVotes is Senate {
     ) internal view virtual override returns (uint256) {
         uint256 totalVotes;
 
-        totalVotes += _delegateCheckpoints[account].getAtProbablyRecentBlock(
-            blockNumber
-        );
+        if (
+            senatorBanned.contains(account) ||
+            senatorInQuarantine[account] >= (block.number - 1)
+        ) return 0;
+
+        totalVotes += _senateBooksCheckpoints[account].getAtProbablyRecentBlock(
+                blockNumber
+            );
+
         //call the old dogs
         for (uint256 idx = 0; idx < oldDogsTokens.values().length; idx++) {
             if (
                 banned.contains(tokens.values()[idx]) ||
-                quarantine[tokens.values()[idx]] >= (block.number - 1)
+                memberInQuarantine[tokens.values()[idx]] >= (block.number - 1)
             ) continue;
 
             totalVotes += IVotes(oldDogsTokens.values()[idx]).getPastVotes(
@@ -93,8 +96,34 @@ abstract contract SenateVotes is Senate {
         virtual
         returns (uint256)
     {
+        if (
+            senatorBanned.contains(account) ||
+            senatorInQuarantine[account] >= (block.number - 1)
+        ) return 0;
+
+        uint256 totalVotes;
+
+        totalVotes += _senateBooksCheckpoints[account].getAtProbablyRecentBlock(
+                blockNumber
+            );
+
+        //call the old dogs
+        for (uint256 idx = 0; idx < oldDogsTokens.values().length; idx++) {
+            if (
+                banned.contains(tokens.values()[idx]) ||
+                memberInQuarantine[tokens.values()[idx]] >= (block.number - 1)
+            ) continue;
+
+            totalVotes += IVotes(oldDogsTokens.values()[idx]).getPastVotes(
+                account,
+                block.number - 1
+            );
+        }
+
         return
-            _delegateCheckpoints[account].getAtProbablyRecentBlock(blockNumber);
+            _senateBooksCheckpoints[account].getAtProbablyRecentBlock(
+                blockNumber
+            );
     }
 
     /**
@@ -119,13 +148,16 @@ abstract contract SenateVotes is Senate {
 
         uint256 _totalSuply;
 
-        _totalSuply += _totalCheckpoints.getAtProbablyRecentBlock(blockNumber);
+        _totalSuply += _totalSenateBooksCheckpoints.getAtProbablyRecentBlock(
+            blockNumber
+        );
 
         //call the old dogs
         for (uint256 idx = 0; idx < oldDogsTokens.values().length; idx++) {
             if (
                 banned.contains(oldDogsTokens.values()[idx]) ||
-                quarantine[oldDogsTokens.values()[idx]] >= (block.number - 1)
+                memberInQuarantine[oldDogsTokens.values()[idx]] >=
+                (block.number - 1)
             ) continue;
             _totalSuply += IVotes(oldDogsTokens.values()[idx])
                 .getPastTotalSupply(blockNumber);
@@ -140,13 +172,14 @@ abstract contract SenateVotes is Senate {
     function _getTotalSuply() internal view virtual override returns (uint256) {
         uint256 _totalSuply;
 
-        _totalSuply += _totalCheckpoints.latest();
+        _totalSuply += _totalSenateBooksCheckpoints.latest();
 
         //call the old dogs
         for (uint256 idx = 0; idx < oldDogsTokens.values().length; idx++) {
             if (
                 banned.contains(oldDogsTokens.values()[idx]) ||
-                quarantine[oldDogsTokens.values()[idx]] >= (block.number - 1)
+                memberInQuarantine[oldDogsTokens.values()[idx]] >=
+                (block.number - 1)
             ) continue;
 
             _totalSuply += IVotes(oldDogsTokens.values()[idx])
@@ -165,15 +198,16 @@ abstract contract SenateVotes is Senate {
         address member,
         address from,
         address to,
-        uint256 amount
+        uint256 amount,
+        bool isSenator
     ) internal virtual override {
         if (from == address(0)) {
-            _totalCheckpoints.push(_add, amount);
+            _totalSenateBooksCheckpoints.push(_add, amount);
         }
         if (to == address(0)) {
-            _totalCheckpoints.push(_subtract, amount);
+            _totalSenateBooksCheckpoints.push(_subtract, amount);
         }
-        _moveDelegateVotes(member, from, to, amount);
+        _moveDelegateVotes(member, from, to, amount, isSenator);
     }
 
     /**
@@ -183,13 +217,20 @@ abstract contract SenateVotes is Senate {
         address member,
         address from,
         address to,
-        uint256 amount
+        uint256 amount,
+        bool isSenator
     ) private {
         if (from != to && amount > 0) {
             if (from != address(0)) {
-                (uint256 oldValue, uint256 newValue) = _delegateCheckpoints[
+                (uint256 oldValue, uint256 newValue) = _senateBooksCheckpoints[
                     from
                 ].push(_subtract, amount);
+
+                if (
+                    !isSenator && _senatorRepresentations[from].contains(member)
+                ) {
+                    _senatorRepresentations[from].remove(member);
+                }
 
                 emit SenateBooksDelegateVotesChanged(
                     member,
@@ -199,8 +240,12 @@ abstract contract SenateVotes is Senate {
                 );
             }
             if (to != address(0)) {
-                (uint256 oldValue, uint256 newValue) = _delegateCheckpoints[to]
-                    .push(_add, amount);
+                (uint256 oldValue, uint256 newValue) = _senateBooksCheckpoints[
+                    to
+                ].push(_add, amount);
+
+                if (!_senatorRepresentations[to].contains(member))
+                    _senatorRepresentations[to].add(member);
 
                 emit SenateBooksDelegateVotesChanged(
                     member,
@@ -210,6 +255,67 @@ abstract contract SenateVotes is Senate {
                 );
             }
         }
+    }
+
+    /**
+     * @dev Read the senator representations at the latest block
+     * @dev For members that dont implement the SenatorVotes, make a external call to get the voting weight.
+     * @dev Quarantined Senators get voting weight zeroed for the duration of quarantine. Banned Senator get no voting weight forever.
+     * @dev For members that dont implement the SenatorVotes, quarantine members give no voting weight for the duration of quarantine. Banned Member gets no voting weight forever.
+     */
+    function _getRepresentation(address account)
+        internal
+        view
+        virtual
+        override
+        returns (address[] memory)
+    {
+        if (
+            senatorBanned.contains(account) ||
+            senatorInQuarantine[account] >= (block.number - 1)
+        ) return new address[](0);
+
+        address[] memory oldDogRepresentations = new address[](
+            oldDogsTokens.length()
+        );
+
+        uint256 nextOnList = 0;
+        //call the old dogs
+        for (uint256 idx = 0; idx < oldDogsTokens.values().length; idx++) {
+            if (
+                banned.contains(oldDogsTokens.values()[idx]) ||
+                memberInQuarantine[oldDogsTokens.values()[idx]] >=
+                (block.number - 1)
+            ) continue;
+
+            if (
+                IVotes(oldDogsTokens.values()[idx]).getPastVotes(
+                    account,
+                    block.number - 1
+                ) > 0
+            ) oldDogRepresentations[nextOnList++] = oldDogsTokens.values()[idx];
+        }
+
+        address[] memory representations = new address[](
+            oldDogsTokens.length() + _senatorRepresentations[account].length()
+        );
+
+        nextOnList = 0;
+        for (uint256 idx = 0; idx < oldDogRepresentations.length; idx++) {
+            representations[nextOnList++] = oldDogRepresentations[idx];
+        }
+
+        for (
+            uint256 idx = 0;
+            idx < _senatorRepresentations[account].length();
+            idx++
+        ) {
+            representations[nextOnList++] = _senatorRepresentations[account].at(
+                idx
+            );
+        }
+
+        return representations;
     }
 
     function _add(uint256 a, uint256 b) private pure returns (uint256) {

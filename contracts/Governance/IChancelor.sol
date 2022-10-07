@@ -81,13 +81,13 @@ abstract contract IChancelor is IERC165 {
 
     /**
      * @notice module:core
-     * @dev Name of the governor instance (used in building the ERC712 domain separator).
+     * @dev Name of the chancelor instance (used in building the ERC712 domain separator).
      */
     function name() public view virtual returns (string memory);
 
     /**
      * @notice module:core
-     * @dev Version of the governor instance (used in building the ERC712 domain separator). Default: "1"
+     * @dev Version of the chancelor instance (used in building the ERC712 domain separator). Default: "1"
      */
     function version() public view virtual returns (string memory);
 
@@ -192,7 +192,8 @@ abstract contract IChancelor is IERC165 {
         returns (
             uint256 proposalThreshold,
             uint256 votingDelay,
-            uint256 votingPeriod
+            uint256 votingPeriod,
+            address[] memory senatorRepresentations
         );
 
     /**

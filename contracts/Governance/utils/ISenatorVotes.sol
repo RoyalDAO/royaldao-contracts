@@ -26,6 +26,11 @@ interface ISenatorVotes {
         uint256 newBalance
     );
 
+    struct senateSnapshot {
+        address senator;
+        uint256 votes;
+    }
+
     /**
      * @dev Returns the current amount of votes that `account` has.
      */
@@ -77,4 +82,12 @@ interface ISenatorVotes {
      * @dev Returns the senate address known by token.
      */
     function getSenateAddress() external view returns (address);
+
+    /**
+     * @dev Returns snapshot of senator votes
+     */
+    function getSenateSnapshot()
+        external
+        view
+        returns (senateSnapshot[] memory);
 }

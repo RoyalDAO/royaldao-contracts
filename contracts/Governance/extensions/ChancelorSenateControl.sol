@@ -106,10 +106,11 @@ abstract contract ChancelorSenateControl is IChancelorSenate, Chancelor {
         returns (
             uint256 currProposalThreshold,
             uint256 currVotingDelay,
-            uint256 currVotingPeriod
+            uint256 currVotingPeriod,
+            address[] memory senatorRepresentations
         )
     {
-        return _senate.getSettings();
+        return _senate.getSettings(msg.sender);
     }
 
     /**
@@ -121,5 +122,31 @@ abstract contract ChancelorSenateControl is IChancelorSenate, Chancelor {
         bytes memory /*params*/
     ) internal view virtual override returns (uint256) {
         return _senate.getVotes(account, blockNumber, _defaultParams());
+    }
+
+    /**
+     * Validate a list of Members
+     */
+    function _validateMembers(address[] memory members)
+        internal
+        view
+        virtual
+        override
+        returns (bool)
+    {
+        return _senate.validateMembers(members);
+    }
+
+    /**
+     * Validate Senator
+     */
+    function _validateSenator(address senator)
+        internal
+        view
+        virtual
+        override
+        returns (bool)
+    {
+        return _senate.validateSenator(senator);
     }
 }

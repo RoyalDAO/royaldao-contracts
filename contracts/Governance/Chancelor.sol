@@ -54,6 +54,8 @@ abstract contract Chancelor is
         );
 
     struct ProposalCore {
+        address proposer;
+        address[] representation;
         Timers.BlockNumber voteStart;
         Timers.BlockNumber voteEnd;
         bool executed;
@@ -235,6 +237,17 @@ abstract contract Chancelor is
     }
 
     /**
+     * @dev returns the list of members representing the proposal.
+     */
+    function proposalRepresentations(uint256 proposalId)
+        external
+        view
+        returns (address[] memory)
+    {
+        return _proposals[proposalId].representation;
+    }
+
+    /**
      * @dev Part of the Chancelor Bravo's interface: _"The number of votes required in order for a voter to become a proposer"_.
      */
     function proposalThreshold() public view virtual returns (uint256) {
@@ -269,6 +282,24 @@ abstract contract Chancelor is
     ) internal view virtual returns (uint256);
 
     /**
+     * Validate a list of Members
+     */
+    function _validateMembers(address[] memory members)
+        internal
+        view
+        virtual
+        returns (bool);
+
+    /**
+     * Validate senator
+     */
+    function _validateSenator(address members)
+        internal
+        view
+        virtual
+        returns (bool);
+
+    /**
      * @dev Register a vote for `proposalId` by `account` with a given `support`, voting `weight` and voting `params`.
      *
      * Note: Support is generic and can represent various things depending on the voting system used.
@@ -300,7 +331,12 @@ abstract contract Chancelor is
         bytes[] memory calldatas,
         string memory description
     ) public virtual override returns (uint256) {
-        (, uint256 currVotingDelay, uint256 currVotingPeriod) = getSettings();
+        (
+            uint256 currProposalThreshol,
+            uint256 currVotingDelay,
+            uint256 currVotingPeriod,
+            address[] memory representation
+        ) = getSettings();
 
         return
             _propose(
@@ -308,8 +344,10 @@ abstract contract Chancelor is
                 values,
                 calldatas,
                 description,
+                currProposalThreshol,
                 currVotingDelay.toUint64(),
-                currVotingPeriod.toUint64()
+                currVotingPeriod.toUint64(),
+                representation
             );
     }
 
@@ -321,11 +359,11 @@ abstract contract Chancelor is
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description,
+        uint256 currProposalThreshold,
         uint64 _votingDelay,
-        uint64 votingPeriod
+        uint64 votingPeriod,
+        address[] memory representation
     ) private returns (uint256) {
-        (uint256 currProposalThreshold, , ) = getSettings();
-
         require(
             getVotes(_msgSender(), block.number - 1) >= currProposalThreshold,
             "Chancelor: proposer votes below proposal threshold"
@@ -357,8 +395,10 @@ abstract contract Chancelor is
         uint64 snapshot = block.number.toUint64() + _votingDelay;
         uint64 deadline = snapshot + votingPeriod;
 
+        _proposals[proposalId].proposer = _msgSender();
         _proposals[proposalId].voteStart.setDeadline(snapshot);
         _proposals[proposalId].voteEnd.setDeadline(deadline);
+        _proposals[proposalId].representation = representation;
 
         emit ProposalCreated(
             proposalId,
@@ -389,6 +429,15 @@ abstract contract Chancelor is
             values,
             calldatas,
             descriptionHash
+        );
+
+        require(
+            _validateMembers(_proposals[proposalId].representation),
+            "Chancelor::Proposal have inapt members"
+        );
+        require(
+            _validateSenator(_proposals[proposalId].proposer),
+            "Chancelor::Proposer Banned or Quarantined"
         );
 
         ProposalState status = state(proposalId);
