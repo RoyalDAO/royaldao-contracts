@@ -1,5 +1,6 @@
 # <img src="https://github.com/RoyalDAO/royaldao-contracts/blob/RELEASE/assets/images/RoyalDAO_Logo.png" alt="RoyalDao" height="80px">
 
+[![Docs](https://img.shields.io/badge/docs-%F0%9F%93%84-blue)](https://royaldao.gitbook.io/royaldao-contracts/)
 [![NPM Package](https://img.shields.io/npm/v/@royaldao/contracts.svg)](https://www.npmjs.org/package/@royaldao/contracts)
 
 **A library for smart contract development of Complex NFT Based DAOs.
