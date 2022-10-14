@@ -3,24 +3,27 @@
 
 pragma solidity ^0.8.0;
 
-import "./IChancelorTimelock.sol";
-import "../Chancelor.sol";
+import "./IChancellorTimelock.sol";
+import "../Chancellor.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/vendor/compound/ICompoundTimelock.sol";
 
 /**
- * @dev Extension of {Chancelor} that binds the execution process to a Compound Timelock. This adds a delay, enforced by
- * the external timelock to all successful proposal (in addition to the voting duration). The {Chancelor} needs to be
+ * @dev Extension of {Chancellor} that binds the execution process to a Compound Timelock. This adds a delay, enforced by
+ * the external timelock to all successful proposal (in addition to the voting duration). The {Chancellor} needs to be
  * the admin of the timelock for any operation to be performed. A public, unrestricted,
- * {ChancelorTimelockCompound-__acceptAdmin} is available to accept ownership of the timelock.
+ * {ChancellorTimelockCompound-__acceptAdmin} is available to accept ownership of the timelock.
  *
- * Using this model means the proposal will be operated by the {TimelockController} and not by the {Chancelor}. Thus,
- * the assets and permissions must be attached to the {TimelockController}. Any asset sent to the {Chancelor} will be
+ * Using this model means the proposal will be operated by the {TimelockController} and not by the {Chancellor}. Thus,
+ * the assets and permissions must be attached to the {TimelockController}. Any asset sent to the {Chancellor} will be
  * inaccessible.
  *
  * _Available since v4.3._
  */
-abstract contract ChancelorTimelockCompound is IChancelorTimelock, Chancelor {
+abstract contract ChancellorTimelockCompound is
+    IChancellorTimelock,
+    Chancellor
+{
     using SafeCast for uint256;
     using Timers for Timers.Timestamp;
 
@@ -51,11 +54,11 @@ abstract contract ChancelorTimelockCompound is IChancelorTimelock, Chancelor {
         public
         view
         virtual
-        override(IERC165, Chancelor)
+        override(IERC165, Chancellor)
         returns (bool)
     {
         return
-            interfaceId == type(IChancelorTimelock).interfaceId ||
+            interfaceId == type(IChancellorTimelock).interfaceId ||
             super.supportsInterface(interfaceId);
     }
 
@@ -66,7 +69,7 @@ abstract contract ChancelorTimelockCompound is IChancelorTimelock, Chancelor {
         public
         view
         virtual
-        override(IChancelor, Chancelor)
+        override(IChancellor, Chancellor)
         returns (ProposalState)
     {
         ProposalState status = super.state(proposalId);
@@ -123,7 +126,7 @@ abstract contract ChancelorTimelockCompound is IChancelorTimelock, Chancelor {
 
         require(
             state(proposalId) == ProposalState.Succeeded,
-            "Chancelor: proposal not successful"
+            "Chancellor: proposal not successful"
         );
 
         uint256 eta = block.timestamp + _timelock.delay();
@@ -135,7 +138,7 @@ abstract contract ChancelorTimelockCompound is IChancelorTimelock, Chancelor {
                         abi.encode(targets[i], values[i], "", calldatas[i], eta)
                     )
                 ),
-                "ChancelorTimelockCompound: identical proposal action already queued"
+                "ChancellorTimelockCompound: identical proposal action already queued"
             );
             _timelock.queueTransaction(
                 targets[i],
@@ -162,7 +165,7 @@ abstract contract ChancelorTimelockCompound is IChancelorTimelock, Chancelor {
         bytes32 /*descriptionHash*/
     ) internal virtual override {
         uint256 eta = proposalEta(proposalId);
-        require(eta > 0, "ChancelorTimelockCompound: proposal not yet queued");
+        require(eta > 0, "ChancellorTimelockCompound: proposal not yet queued");
         Address.sendValue(payable(_timelock), msg.value);
         for (uint256 i = 0; i < targets.length; ++i) {
             _timelock.executeTransaction(
@@ -240,7 +243,7 @@ abstract contract ChancelorTimelockCompound is IChancelorTimelock, Chancelor {
     function updateTimelock(ICompoundTimelock newTimelock)
         external
         virtual
-        onlyChancelor
+        onlyChancellor
     {
         _updateTimelock(newTimelock);
     }

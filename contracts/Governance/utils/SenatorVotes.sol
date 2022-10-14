@@ -32,11 +32,13 @@ import "../../Utils/Checkpoints.sol";
  * _Available since v4.5._
  */
 abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
+    //TODO: test if runs with Governor
+    //TODO: function to leave senate
     using EnumerableSet for EnumerableSet.AddressSet;
     using Strings for uint256;
 
     constructor(ISenate _senate) {
-        senate = _senate;
+        _setSenate(_senate);
     }
 
     using Checkpoints for Checkpoints.History;
@@ -53,7 +55,6 @@ abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
 
     mapping(address => Counters.Counter) private _nonces;
 
-    mapping(address => uint256) private senatorVotes;
     EnumerableSet.AddressSet internal senators;
 
     /**
@@ -298,5 +299,37 @@ abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
         }
 
         return snapshot;
+    }
+
+    /**
+     * @dev Returns current voting suply
+     */
+    function getTotalSupply() external view override returns (uint256) {
+        return _getTotalSupply();
+    }
+
+    /**
+     * @dev Set senate address.
+     */
+    function setSenate(ISenate _senate) external virtual {
+        _setSenate(_senate);
+    }
+
+    /**
+     * @dev Set senate address.
+     */
+    function _setSenate(ISenate _senate) internal virtual {
+        if (address(senate) != address(0))
+            require(
+                uint256(senate.senateMemberStatus(address(_senate))) !=
+                    uint256(membershipStatus.ACTIVE_MEMBER),
+                "SenatorVotes::Current active in Senate"
+            );
+
+        address oldSenate = address(senate);
+
+        senate = _senate;
+
+        emit SenateChanged(oldSenate, address(senate));
     }
 }

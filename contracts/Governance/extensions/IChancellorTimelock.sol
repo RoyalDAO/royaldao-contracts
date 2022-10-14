@@ -3,14 +3,14 @@
 
 pragma solidity ^0.8.0;
 
-import "../IChancelor.sol";
+import "../IChancellor.sol";
 
 /**
- * @dev Extension of the {IChancelor} for timelock supporting modules.
+ * @dev Extension of the {IChancellor} for timelock supporting modules.
  *
  * _Available since v4.3._
  */
-abstract contract IChancelorTimelock is IChancelor {
+abstract contract IChancellorTimelock is IChancellor {
     event ProposalQueued(uint256 proposalId, uint256 eta);
 
     function timelock() public view virtual returns (address);

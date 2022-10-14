@@ -30,24 +30,17 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
     EnumerableSet.AddressSet internal banned;
     EnumerableSet.AddressSet internal senatorBanned;
 
-    address internal deputyMarshal;
-    address internal chancelor;
+    address public Chancellor;
 
-    uint256 public mandatePeriod;
-    mapping(address => uint256) internal deputyMandate;
     uint256 public quarantinePeriod;
+
     mapping(address => uint256) internal memberInQuarantine;
     mapping(address => uint256) internal senatorInQuarantine;
 
     string private _name;
 
-    modifier onlyMarshal() {
-        require(msg.sender == deputyMarshal, "Senate::Only deputy allowed!");
-        _;
-    }
-
-    modifier onlyChancelor() {
-        require(msg.sender == chancelor, "Senate::Only Chancelor allowed!");
+    modifier onlyChancellor() {
+        require(msg.sender == Chancellor, "Senate::Only Chancellor allowed!");
         _;
     }
 
@@ -77,18 +70,12 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
 
     constructor(
         string memory name_,
-        address _deputyMarshal,
-        uint256 _mandatePeriod,
-        address _chancelor,
+        address _Chancellor,
         uint256 _quarantinePeriod
     ) EIP712(name_, version()) {
         quarantinePeriod = _quarantinePeriod;
 
-        //set deputy mandate
-        mandatePeriod = _mandatePeriod;
-        _setNewDeputyMarshal(_deputyMarshal);
-
-        chancelor = _chancelor;
+        Chancellor = _Chancellor;
         _name = name_;
     }
 
@@ -109,7 +96,6 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
     function openSenate(address[] memory _tokens)
         external
         virtual
-        onlyMarshal
         ifSenateClosed
     {
         for (uint256 idx = 0; idx < _tokens.length; idx++) {
@@ -143,17 +129,18 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         return "";
     }
 
-    function getNewGang() public view returns (address[] memory) {
+    function getNewGang() external view returns (address[] memory) {
         return tokens.values();
     }
 
-    function getOldDogs() public view returns (address[] memory) {
+    function getOldDogs() external view returns (address[] memory) {
         return oldDogsTokens.values();
     }
 
     function senateMemberStatus(address _tokenAddress)
         public
         view
+        override
         returns (membershipStatus)
     {
         if (memberInQuarantine[_tokenAddress] >= block.number) {
@@ -168,41 +155,38 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         } else return membershipStatus.NOT_MEMBER;
     }
 
-    function changeDeputyMarshal(address _newMarshalInTown)
-        external
-        virtual
-        override
-        onlyChancelor
-    {
-        _setNewDeputyMarshal(_newMarshalInTown);
-    }
+    /*********************************************** \/ Senate house keeping ***************************************************/
 
-    function _setNewDeputyMarshal(address _newMarshalInTown) internal {
-        require(
-            deputyMandate[deputyMarshal] < block.number,
-            "Senate::Mandate not ended!"
-        );
-
-        deputyMarshal = _newMarshalInTown;
-        //set deputy mandate
-        deputyMandate[deputyMarshal] = block.number + mandatePeriod;
-
-        emit NewDeputyInTown(_newMarshalInTown, block.number + mandatePeriod);
-    }
-
-    function deputyResignation(address _currentDeputy)
-        external
-        virtual
-        onlyMarshal
-    {
-        //set deputy final mandate block
-        deputyMandate[_currentDeputy] = block.number;
-
-        emit DeputyResignation(_currentDeputy, block.number);
-    }
-
-    function acceptToSenate(address _token) public virtual onlyChancelor {
+    function acceptToSenate(address _token) external virtual onlyChancellor {
         _acceptToSenate(_token);
+    }
+
+    function quarantineUntil(address _token) external view returns (uint256) {
+        return memberInQuarantine[_token];
+    }
+
+    function banFromSenate(address _token) external virtual onlyChancellor {
+        _banFromSenate(_token);
+    }
+
+    function quarantineFromSenate(address _token) external virtual;
+
+    function quarantineSenator(address _senator) external virtual;
+
+    function senatorQuarantineUntil(address _senator)
+        external
+        view
+        returns (uint256)
+    {
+        return senatorInQuarantine[_senator];
+    }
+
+    function banSenatorFromSenate(address _senator)
+        external
+        virtual
+        onlyChancellor
+    {
+        _banSenatorFromSenate(_senator);
     }
 
     function _acceptToSenate(address _token) internal {
@@ -223,6 +207,56 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         } else revert("Senate::Invalid implementation!");
     }
 
+    function _quarantineFromSenate(address _token) internal {
+        require(!banned.contains(_token), "SenateUpgradeable::Already Banned");
+
+        memberInQuarantine[_token] = block.number + quarantinePeriod;
+
+        emit MemberQuarantined(_token);
+    }
+
+    function _banFromSenate(address _token) internal {
+        require(!banned.contains(_token), "Senate::Already Banned");
+
+        banned.add(_token);
+
+        //burn suply from senate books
+        _burnMemberVotings(_token);
+
+        emit MemberBanned(_token);
+    }
+
+    function _quarantineSenator(address _senator) internal {
+        require(
+            !senatorBanned.contains(_senator),
+            "SenateUpgradeable::Already Banned"
+        );
+
+        senatorInQuarantine[_senator] = block.number + quarantinePeriod;
+
+        emit SenatorQuarantined(_senator);
+    }
+
+    function _banSenatorFromSenate(address _senator) internal {
+        require(
+            !senatorBanned.contains(_senator),
+            "SenateUpgradeable::Already Banned"
+        );
+
+        senatorBanned.add(_senator);
+
+        //burn voting power from senator
+        _transferVotingUnits(
+            address(0),
+            _senator,
+            address(0),
+            _getVotes(_senator, block.number - 1, ""),
+            false
+        );
+
+        emit SenatorBanned(_senator);
+    }
+
     function writeMemberToSenateBooks(address member) private {
         //get owners list
         ISenatorVotes.senateSnapshot[] memory _totalSuply = ISenatorVotes(
@@ -240,84 +274,16 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         }
     }
 
-    function quarantineFromSenate(address _token) public virtual onlyMarshal {
-        _quarantineFromSenate(_token);
-    }
-
-    function _quarantineFromSenate(address _token) internal {
-        require(!banned.contains(_token), "SenateUpgradeable::Already Banned");
-
-        memberInQuarantine[_token] = block.number + quarantinePeriod;
-
-        emit MemberQuarantined(_token);
-    }
-
-    function quarantineUntil(address _token) external view returns (uint256) {
-        return memberInQuarantine[_token];
-    }
-
-    function banFromSenate(address _token) public virtual onlyChancelor {
-        _banFromSenate(_token);
-    }
-
-    function _banFromSenate(address _token) internal {
-        require(!banned.contains(_token), "SenateUpgradeable::Already Banned");
-
-        if (tokens.contains(_token)) tokens.remove(_token);
-
-        banned.add(_token);
-
-        emit MemberBanned(_token);
-    }
-
-    function quarantineSenator(address _senator) public virtual onlyMarshal {
-        _quarantineSenator(_senator);
-    }
-
-    function _quarantineSenator(address _senator) internal {
-        require(
-            !senatorBanned.contains(_senator),
-            "SenateUpgradeable::Already Banned"
-        );
-
-        senatorInQuarantine[_senator] = block.number + quarantinePeriod;
-
-        emit SenatorQuarantined(_senator);
-    }
-
-    function senatorQuarantineUntil(address _senator)
-        external
-        view
-        returns (uint256)
-    {
-        return senatorInQuarantine[_senator];
-    }
-
-    function banSenatorFromSenate(address _senator)
-        public
-        virtual
-        onlyChancelor
-    {
-        _banSenatorFromSenate(_senator);
-    }
-
-    function _banSenatorFromSenate(address _senator) internal {
-        require(
-            !senatorBanned.contains(_senator),
-            "SenateUpgradeable::Already Banned"
-        );
-
-        senatorBanned.add(_senator);
-
-        emit SenatorBanned(_senator);
-    }
+    /*********************************************** /\ Senate house keeping ***************************************************/
 
     /**
-     * @dev Part of the Chancelor Bravo's interface: _"The number of votes required in order for a voter to become a proposer"_.
+     * @dev Part of the Chancellor Bravo's interface: _"The number of votes required in order for a voter to become a proposer"_.
      */
     function proposalThreshold() public view virtual returns (uint256) {
         return 0;
     }
+
+    /*********************************************** \/ Functions that contract must implement ***********************************************/
 
     /**
      * @dev Get the voting weight of `account` at a specific `blockNumber`, for a vote as described by `params`.
@@ -343,7 +309,24 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         virtual
         returns (uint256);
 
-    //book functions
+    function getSettings(address account)
+        external
+        view
+        virtual
+        returns (
+            uint256 proposalThreshold,
+            uint256 votingDelay,
+            uint256 votingPeriod,
+            address[] memory senatorRepresentations,
+            uint256 votingPower
+        );
+
+    function _getRepresentation(address account)
+        internal
+        view
+        virtual
+        returns (address[] memory);
+
     /**
      * @dev Transfers, mints, or burns voting units. To register a mint, `from` should be zero. To register a burn, `to`
      * should be zero. Total supply of voting units will be adjusted with mints and burns.
@@ -357,6 +340,10 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         uint256 amount,
         bool isSenator
     ) internal virtual;
+
+    function _burnMemberVotings(address member) internal virtual;
+
+    /*********************************************** /\ Functions that contract must implement ***********************************************/
 
     /**
      * @dev Get the voting weight of `account` at a specific `blockNumber`, for a vote as described by `params`.
@@ -388,23 +375,6 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         _transferVotingUnits(msg.sender, from, to, amount, isSenator);
     }
 
-    function getSettings(address account)
-        external
-        view
-        virtual
-        returns (
-            uint256 proposalThreshold,
-            uint256 votingDelay,
-            uint256 votingPeriod,
-            address[] memory senatorRepresentations
-        );
-
-    function _getRepresentation(address account)
-        internal
-        view
-        virtual
-        returns (address[] memory);
-
     /**
      * @dev Get the current senator representation.
      */
@@ -420,21 +390,33 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
     /**
      * @dev Check if all members from list are valid.
      */
-    function validateMembers(address[] calldata members)
-        external
+    function validateMembers(address[] memory members)
+        public
         view
         virtual
         override
         returns (bool)
     {
         for (uint256 idx = 0; idx < members.length; idx++) {
-            if (
-                (!tokens.contains(members[idx]) &&
-                    !oldDogsTokens.contains(members[idx])) ||
-                banned.contains(members[idx]) ||
-                memberInQuarantine[members[idx]] >= block.number
-            ) return false;
+            if (!_validateMember(members[idx])) return false;
         }
+
+        return true;
+    }
+
+    /**
+     * @dev Check if a given member is valid.
+     */
+    function _validateMember(address member)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
+        if (
+            banned.contains(member) ||
+            memberInQuarantine[member] >= block.number
+        ) return false;
         return true;
     }
 

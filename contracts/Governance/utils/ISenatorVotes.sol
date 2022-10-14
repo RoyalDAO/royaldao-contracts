@@ -9,6 +9,10 @@ pragma solidity ^0.8.0;
  */
 interface ISenatorVotes {
     /**
+     * @dev Emitted when senate address is set or changed.
+     */
+    event SenateChanged(address indexed oldSenate, address indexed newSenate);
+    /**
      * @dev Emitted when an account changes their delegate.
      */
     event DelegateChanged(
@@ -25,6 +29,13 @@ interface ISenatorVotes {
         uint256 previousBalance,
         uint256 newBalance
     );
+
+    enum membershipStatus {
+        NOT_MEMBER,
+        ACTIVE_MEMBER,
+        QUARANTINE_MEMBER,
+        BANNED_MEMBER
+    }
 
     struct senateSnapshot {
         address senator;
@@ -90,4 +101,9 @@ interface ISenatorVotes {
         external
         view
         returns (senateSnapshot[] memory);
+
+    /**
+     * @dev Returns current voting suply
+     */
+    function getTotalSupply() external view returns (uint256);
 }

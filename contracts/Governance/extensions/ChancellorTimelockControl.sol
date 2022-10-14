@@ -3,27 +3,27 @@
 
 pragma solidity ^0.8.0;
 
-import "./IChancelorTimelock.sol";
-import "../Chancelor.sol";
+import "./IChancellorTimelock.sol";
+import "../Chancellor.sol";
 import "../TimelockController.sol";
 
 /**
- * @dev Extension of {Chancelor} that binds the execution process to an instance of {TimelockController}. This adds a
+ * @dev Extension of {Chancellor} that binds the execution process to an instance of {TimelockController}. This adds a
  * delay, enforced by the {TimelockController} to all successful proposal (in addition to the voting duration). The
- * {Chancelor} needs the proposer (and ideally the executor) roles for the {Chancelor} to work properly.
+ * {Chancellor} needs the proposer (and ideally the executor) roles for the {Chancellor} to work properly.
  *
- * Using this model means the proposal will be operated by the {TimelockController} and not by the {Chancelor}. Thus,
- * the assets and permissions must be attached to the {TimelockController}. Any asset sent to the {Chancelor} will be
+ * Using this model means the proposal will be operated by the {TimelockController} and not by the {Chancellor}. Thus,
+ * the assets and permissions must be attached to the {TimelockController}. Any asset sent to the {Chancellor} will be
  * inaccessible.
  *
- * WARNING: Setting up the TimelockController to have additional proposers besides the Chancelor is very risky, as it
- * grants them powers that they must be trusted or known not to use: 1) {onlyChancelor} functions like {relay} are
- * available to them through the timelock, and 2) approved Chancelor proposals can be blocked by them, effectively
+ * WARNING: Setting up the TimelockController to have additional proposers besides the Chancellor is very risky, as it
+ * grants them powers that they must be trusted or known not to use: 1) {onlyChancellor} functions like {relay} are
+ * available to them through the timelock, and 2) approved Chancellor proposals can be blocked by them, effectively
  * executing a Denial of Service attack. This risk will be mitigated in a future release.
  *
  * _Available since v4.3._
  */
-abstract contract ChancelorTimelockControl is IChancelorTimelock, Chancelor {
+abstract contract ChancellorTimelockControl is IChancellorTimelock, Chancellor {
     TimelockController private _timelock;
     mapping(uint256 => bytes32) private _timelockIds;
 
@@ -46,22 +46,22 @@ abstract contract ChancelorTimelockControl is IChancelorTimelock, Chancelor {
         public
         view
         virtual
-        override(IERC165, Chancelor)
+        override(IERC165, Chancellor)
         returns (bool)
     {
         return
-            interfaceId == type(IChancelorTimelock).interfaceId ||
+            interfaceId == type(IChancellorTimelock).interfaceId ||
             super.supportsInterface(interfaceId);
     }
 
     /**
-     * @dev Overridden version of the {Chancelor-state} function with added support for the `Queued` status.
+     * @dev Overridden version of the {Chancellor-state} function with added support for the `Queued` status.
      */
     function state(uint256 proposalId)
         public
         view
         virtual
-        override(IChancelor, Chancelor)
+        override(IChancellor, Chancellor)
         returns (ProposalState)
     {
         ProposalState status = super.state(proposalId);
@@ -122,7 +122,7 @@ abstract contract ChancelorTimelockControl is IChancelorTimelock, Chancelor {
 
         require(
             state(proposalId) == ProposalState.Succeeded,
-            "Chancelor: proposal not successful"
+            "Chancellor: proposal not successful"
         );
 
         uint256 delay = _timelock.getMinDelay();
@@ -167,7 +167,7 @@ abstract contract ChancelorTimelockControl is IChancelorTimelock, Chancelor {
     }
 
     /**
-     * @dev Overridden version of the {Chancelor-_cancel} function to cancel the timelocked proposal if it as already
+     * @dev Overridden version of the {Chancellor-_cancel} function to cancel the timelocked proposal if it as already
      * been queued.
      */
     // This function can reenter through the external call to the timelock, but we assume the timelock is trusted and
@@ -195,7 +195,7 @@ abstract contract ChancelorTimelockControl is IChancelorTimelock, Chancelor {
     }
 
     /**
-     * @dev Address through which the Chancelor executes action. In this case, the timelock.
+     * @dev Address through which the Chancellor executes action. In this case, the timelock.
      */
     function _executor() internal view virtual override returns (address) {
         return address(_timelock);
@@ -203,14 +203,14 @@ abstract contract ChancelorTimelockControl is IChancelorTimelock, Chancelor {
 
     /**
      * @dev Public endpoint to update the underlying timelock instance. Restricted to the timelock itself, so updates
-     * must be proposed, scheduled, and executed through Chancelor proposals.
+     * must be proposed, scheduled, and executed through Chancellor proposals.
      *
-     * CAUTION: It is not recommended to change the timelock while there are other queued Chancelor proposals.
+     * CAUTION: It is not recommended to change the timelock while there are other queued Chancellor proposals.
      */
     function updateTimelock(TimelockController newTimelock)
         external
         virtual
-        onlyChancelor
+        onlyChancellor
     {
         _updateTimelock(newTimelock);
     }

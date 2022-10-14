@@ -3,14 +3,14 @@
 
 pragma solidity ^0.8.0;
 
-import "../Chancelor.sol";
+import "../Chancellor.sol";
 
 /**
  * @dev Extension of {Governor} for simple, 3 options, vote counting.
  *
  * _Available since v4.3._
  */
-abstract contract ChancelorCountingSimple is Chancelor {
+abstract contract ChancellorCountingSimple is Chancellor {
     /**
      * @dev Supported vote types. Matches Governor Bravo ordering.
      */
@@ -30,7 +30,7 @@ abstract contract ChancelorCountingSimple is Chancelor {
     mapping(uint256 => ProposalVote) private _proposalVotes;
 
     /**
-     * @dev See {IChancelor-COUNTING_MODE}.
+     * @dev See {IChancellor-COUNTING_MODE}.
      */
     // solhint-disable-next-line func-name-mixedcase
     function COUNTING_MODE()
@@ -44,7 +44,7 @@ abstract contract ChancelorCountingSimple is Chancelor {
     }
 
     /**
-     * @dev See {IChancelor-hasVoted}.
+     * @dev See {IChancellor-hasVoted}.
      */
     function hasVoted(uint256 proposalId, address account)
         public
@@ -78,7 +78,7 @@ abstract contract ChancelorCountingSimple is Chancelor {
     }
 
     /**
-     * @dev See {Chancelor-_quorumReached}.
+     * @dev See {Chancellor-_quorumReached}.
      */
     function _quorumReached(uint256 proposalId)
         internal
@@ -95,7 +95,7 @@ abstract contract ChancelorCountingSimple is Chancelor {
     }
 
     /**
-     * @dev See {Chancelor-_voteSucceeded}. In this module, the forVotes must be strictly over the againstVotes.
+     * @dev See {Chancellor-_voteSucceeded}. In this module, the forVotes must be strictly over the againstVotes.
      */
     function _voteSucceeded(uint256 proposalId)
         internal
@@ -110,7 +110,7 @@ abstract contract ChancelorCountingSimple is Chancelor {
     }
 
     /**
-     * @dev See {Chancelor-_countVote}. In this module, the support follows the `VoteType` enum (from Governor Bravo).
+     * @dev See {Chancellor-_countVote}. In this module, the support follows the `VoteType` enum (from Governor Bravo).
      */
     function _countVote(
         uint256 proposalId,
@@ -123,7 +123,7 @@ abstract contract ChancelorCountingSimple is Chancelor {
 
         require(
             !proposalVote.hasVoted[account],
-            "ChancelorVotingSimple: vote already cast"
+            "ChancellorVotingSimple: vote already cast"
         );
         proposalVote.hasVoted[account] = true;
 
@@ -134,7 +134,7 @@ abstract contract ChancelorCountingSimple is Chancelor {
         } else if (support == uint8(VoteType.Abstain)) {
             proposalVote.abstainVotes += weight;
         } else {
-            revert("ChancelorVotingSimple: invalid value for enum VoteType");
+            revert("ChancellorVotingSimple: invalid value for enum VoteType");
         }
     }
 }

@@ -3,7 +3,7 @@
 
 pragma solidity ^0.8.0;
 
-import "../Chancelor.sol";
+import "../Chancellor.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
@@ -17,7 +17,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
  *
  * _Available since v4.5._
  */
-abstract contract ChancelorPreventLateQuorum is Chancelor {
+abstract contract ChancellorPreventLateQuorum is Chancellor {
     using SafeCast for uint256;
     using Timers for Timers.BlockNumber;
 
@@ -44,7 +44,7 @@ abstract contract ChancelorPreventLateQuorum is Chancelor {
 
     /**
      * @dev Returns the proposal deadline, which may have been extended beyond that set at proposal creation, if the
-     * proposal reached quorum late in the voting period. See {Chancelor-proposalDeadline}.
+     * proposal reached quorum late in the voting period. See {Chancellor-proposalDeadline}.
      */
     function proposalDeadline(uint256 proposalId)
         public
@@ -62,7 +62,7 @@ abstract contract ChancelorPreventLateQuorum is Chancelor {
 
     /**
      * @dev Casts a vote and detects if it caused quorum to be reached, potentially extending the voting period. See
-     * {Chancelor-_castVote}.
+     * {Chancellor-_castVote}.
      *
      * May emit a {ProposalExtended} event.
      */
@@ -116,7 +116,7 @@ abstract contract ChancelorPreventLateQuorum is Chancelor {
     function setLateQuorumVoteExtension(uint64 newVoteExtension)
         public
         virtual
-        onlyChancelor
+        onlyChancellor
     {
         _setLateQuorumVoteExtension(newVoteExtension);
     }

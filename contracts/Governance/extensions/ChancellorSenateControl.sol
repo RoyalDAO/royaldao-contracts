@@ -3,27 +3,27 @@
 
 pragma solidity ^0.8.0;
 
-import "./IChancelorSenate.sol";
-import "../Chancelor.sol";
+import "./IChancellorSenate.sol";
+import "../Chancellor.sol";
 import "../Senate.sol";
 
 /**
- * @dev Extension of {Chancelor} that binds the execution process to an instance of {TimelockController}. This adds a
+ * @dev Extension of {Chancellor} that binds the execution process to an instance of {TimelockController}. This adds a
  * delay, enforced by the {TimelockController} to all successful proposal (in addition to the voting duration). The
- * {Chancelor} needs the proposer (and ideally the executor) roles for the {Chancelor} to work properly.
+ * {Chancellor} needs the proposer (and ideally the executor) roles for the {Chancellor} to work properly.
  *
- * Using this model means the proposal will be operated by the {TimelockController} and not by the {Chancelor}. Thus,
- * the assets and permissions must be attached to the {TimelockController}. Any asset sent to the {Chancelor} will be
+ * Using this model means the proposal will be operated by the {TimelockController} and not by the {Chancellor}. Thus,
+ * the assets and permissions must be attached to the {TimelockController}. Any asset sent to the {Chancellor} will be
  * inaccessible.
  *
- * WARNING: Setting up the TimelockController to have additional proposers besides the Chancelor is very risky, as it
- * grants them powers that they must be trusted or known not to use: 1) {onlyChancelor} functions like {relay} are
- * available to them through the timelock, and 2) approved Chancelor proposals can be blocked by them, effectively
+ * WARNING: Setting up the TimelockController to have additional proposers besides the Chancellor is very risky, as it
+ * grants them powers that they must be trusted or known not to use: 1) {onlyChancellor} functions like {relay} are
+ * available to them through the timelock, and 2) approved Chancellor proposals can be blocked by them, effectively
  * executing a Denial of Service attack. This risk will be mitigated in a future release.
  *
  * _Available since v4.3._
  */
-abstract contract ChancelorSenateControl is IChancelorSenate, Chancelor {
+abstract contract ChancellorSenateControl is IChancellorSenate, Chancellor {
     Senate private _senate;
 
     /**
@@ -40,11 +40,11 @@ abstract contract ChancelorSenateControl is IChancelorSenate, Chancelor {
         public
         view
         virtual
-        override(IERC165, Chancelor)
+        override(IERC165, Chancellor)
         returns (bool)
     {
         return
-            interfaceId == type(IChancelorSenate).interfaceId ||
+            interfaceId == type(IChancellorSenate).interfaceId ||
             super.supportsInterface(interfaceId);
     }
 
@@ -57,11 +57,11 @@ abstract contract ChancelorSenateControl is IChancelorSenate, Chancelor {
 
     /**
      * @dev Public endpoint to update the underlying timelock instance. Restricted to the timelock itself, so updates
-     * must be proposed, scheduled, and executed through Chancelor proposals.
+     * must be proposed, scheduled, and executed through Chancellor proposals.
      *
-     * CAUTION: It is not recommended to change the timelock while there are other queued Chancelor proposals.
+     * CAUTION: It is not recommended to change the timelock while there are other queued Chancellor proposals.
      */
-    function updateSenate(Senate newSenate) external virtual onlyChancelor {
+    function updateSenate(Senate newSenate) external virtual onlyChancellor {
         _updateSenate(newSenate);
     }
 
@@ -107,7 +107,8 @@ abstract contract ChancelorSenateControl is IChancelorSenate, Chancelor {
             uint256 currProposalThreshold,
             uint256 currVotingDelay,
             uint256 currVotingPeriod,
-            address[] memory senatorRepresentations
+            address[] memory senatorRepresentations,
+            uint256 votingPower
         )
     {
         return _senate.getSettings(msg.sender);

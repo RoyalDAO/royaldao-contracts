@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../../Utils/Checkpoints.sol";
 
 /**
- * @dev Extension of {Chancelor} for voting weight extraction from an {ERC20Votes} token and a quorum expressed as a
+ * @dev Extension of {Chancellor} for voting weight extraction from an {ERC20Votes} token and a quorum expressed as a
  * fraction of the total supply.
  *
  * _Available since v4.3._
@@ -110,13 +110,13 @@ abstract contract SenateVotesQuorumFraction is Senate {
      *
      * Requirements:
      *
-     * - Must be called through a Chancelor proposal.
+     * - Must be called through a Chancellor proposal.
      * - New numerator must be smaller or equal to the denominator.
      */
     function updateQuorumNumerator(uint256 newQuorumNumerator)
         external
         virtual
-        onlyChancelor
+        onlyChancellor
     {
         _updateQuorumNumerator(newQuorumNumerator);
     }
@@ -136,7 +136,7 @@ abstract contract SenateVotesQuorumFraction is Senate {
     {
         require(
             newQuorumNumerator <= quorumDenominator(),
-            "ChancelorVotesQuorumFraction: quorumNumerator over quorumDenominator"
+            "ChancellorVotesQuorumFraction: quorumNumerator over quorumDenominator"
         );
 
         uint256 oldQuorumNumerator = quorumNumerator();

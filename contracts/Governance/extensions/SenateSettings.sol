@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
 import "../Senate.sol";
 
 /**
- * @dev Extension of {Chancelor} for settings updatable through governance.
+ * @dev Extension of {Chancellor} for settings updatable through governance.
  *
  * _Available since v4.4._
  */
@@ -36,21 +36,21 @@ abstract contract SenateSettings is Senate {
     }
 
     /**
-     * @dev See {IChancelor-votingDelay}.
+     * @dev See {ISenate-votingDelay}.
      */
     function votingDelay() public view virtual override returns (uint256) {
         return _votingDelay;
     }
 
     /**
-     * @dev See {IChancelor-votingPeriod}.
+     * @dev See {ISenate-votingPeriod}.
      */
     function votingPeriod() public view virtual override returns (uint256) {
         return _votingPeriod;
     }
 
     /**
-     * @dev See {Chancelor-proposalThreshold}.
+     * @dev See {Chancellor-proposalThreshold}.
      */
     function proposalThreshold()
         public
@@ -71,14 +71,16 @@ abstract contract SenateSettings is Senate {
             uint256 currProposalThreshold,
             uint256 currVotingDelay,
             uint256 currVotingPeriod,
-            address[] memory senatorRepresentations
+            address[] memory senatorRepresentations,
+            uint256 votingPower
         )
     {
         return (
             _proposalThreshold,
             _votingDelay,
             _votingPeriod,
-            _getRepresentation(account)
+            _getRepresentation(account),
+            _getVotes(account, block.number - 1, "")
         );
     }
 
@@ -90,7 +92,7 @@ abstract contract SenateSettings is Senate {
     function setVotingDelay(uint256 newVotingDelay)
         public
         virtual
-        onlyChancelor
+        onlyChancellor
     {
         _setVotingDelay(newVotingDelay);
     }
@@ -103,20 +105,20 @@ abstract contract SenateSettings is Senate {
     function setVotingPeriod(uint256 newVotingPeriod)
         public
         virtual
-        onlyChancelor
+        onlyChancellor
     {
         _setVotingPeriod(newVotingPeriod);
     }
 
     /**
-     * @dev Update the proposal threshold. This operation can only be performed through a Chancelor proposal.
+     * @dev Update the proposal threshold. This operation can only be performed through a Chancellor proposal.
      *
      * Emits a {ProposalThresholdSet} event.
      */
     function setProposalThreshold(uint256 newProposalThreshold)
         public
         virtual
-        onlyChancelor
+        onlyChancellor
     {
         _setProposalThreshold(newProposalThreshold);
     }
@@ -140,7 +142,7 @@ abstract contract SenateSettings is Senate {
         // voting period must be at least one block long
         require(
             newVotingPeriod > 0,
-            "ChancelorSettings: voting period too low"
+            "ChancellorSettings: voting period too low"
         );
         emit VotingPeriodSet(_votingPeriod, newVotingPeriod);
         _votingPeriod = newVotingPeriod;

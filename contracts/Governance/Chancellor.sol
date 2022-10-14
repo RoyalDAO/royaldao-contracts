@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Timers.sol";
-import "./IChancelor.sol";
+import "./IChancellor.sol";
 
 /**
  * @dev Core of the senate system, designed to be extended though various modules.
@@ -24,7 +24,7 @@ import "./IChancelor.sol";
  * - A voting module must implement {_getVotes}
  * - Additionanly, the {votingPeriod} must also be implemented
  *
- * ChancelorUpgradeable.sol modifies OpenZeppelin's GovernorUpgradeable.sol:
+ * ChancellorUpgradeable.sol modifies OpenZeppelin's GovernorUpgradeable.sol:
  * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/master/contracts/governance/GovernorUpgradeable.sol
  * GovernorUpgradeable.sol source code copyright OpenZeppelin licensed under the MIT License.
  * Modified by QueenE DAO.
@@ -34,11 +34,11 @@ import "./IChancelor.sol";
  *
 
  */
-abstract contract Chancelor is
+abstract contract Chancellor is
     Context,
     ERC165,
     EIP712,
-    IChancelor,
+    IChancellor,
     IERC721Receiver,
     IERC1155Receiver
 {
@@ -66,28 +66,28 @@ abstract contract Chancelor is
 
     mapping(uint256 => ProposalCore) private _proposals;
 
-    // This queue keeps track of the chancelor operating on itself. Calls to functions protected by the
-    // {onlyChancelor} modifier needs to be whitelisted in this queue. Whitelisting is set in {_beforeExecute},
-    // consumed by the {onlyChancelor} modifier and eventually reset in {_afterExecute}. This ensures that the
-    // execution of {onlyChancelor} protected calls can only be achieved through successful proposals.
-    DoubleEndedQueue.Bytes32Deque private _chancelorCall;
+    // This queue keeps track of the Chancellor operating on itself. Calls to functions protected by the
+    // {onlyChancellor} modifier needs to be whitelisted in this queue. Whitelisting is set in {_beforeExecute},
+    // consumed by the {onlyChancellor} modifier and eventually reset in {_afterExecute}. This ensures that the
+    // execution of {onlyChancellor} protected calls can only be achieved through successful proposals.
+    DoubleEndedQueue.Bytes32Deque private _ChancellorCall;
 
     /**
      * @dev Restricts a function so it can only be executed through governance proposals. For example, governance
-     * parameter setters in {ChancelorSettings} are protected using this modifier.
+     * parameter setters in {ChancellorSettings} are protected using this modifier.
      *
      * The governance executing address may be different from the Chanceler's own address, for example it could be a
      * timelock. This can be customized by modules by overriding {_executor}. The executor is only able to invoke these
-     * functions during the execution of the chancelor's {execute} function, and not under any other circumstances. Thus,
+     * functions during the execution of the Chancellor's {execute} function, and not under any other circumstances. Thus,
      * for example, additional timelock proposers are not able to change governance parameters without going through the
-     * chancelor protocol (since v4.6).
+     * Chancellor protocol (since v4.6).
      */
-    modifier onlyChancelor() {
-        require(_msgSender() == _executor(), "Chancelor: onlyChancelor");
+    modifier onlyChancellor() {
+        require(_msgSender() == _executor(), "Chancellor: onlyChancellor");
         if (_executor() != address(this)) {
             bytes32 msgDataHash = keccak256(_msgData());
             // loop until popping the expected operation - throw if deque is empty (operation not authorized)
-            while (_chancelorCall.popFront() != msgDataHash) {}
+            while (_ChancellorCall.popFront() != msgDataHash) {}
         }
         _;
     }
@@ -97,7 +97,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev Function to receive ETH that will be handled by the chancelor (disabled if executor is a third party contract)
+     * @dev Function to receive ETH that will be handled by the Chancellor (disabled if executor is a third party contract)
      */
     receive() external payable virtual {
         require(_executor() == address(this));
@@ -117,41 +117,41 @@ abstract contract Chancelor is
         // include the castVoteWithReasonAndParams() function as standard
         return
             interfaceId ==
-            (type(IChancelor).interfaceId ^
+            (type(IChancellor).interfaceId ^
                 this.castVoteWithReasonAndParams.selector ^
                 this.castVoteWithReasonAndParamsBySig.selector ^
                 this.getVotesWithParams.selector) ||
-            interfaceId == type(IChancelor).interfaceId ||
+            interfaceId == type(IChancellor).interfaceId ||
             interfaceId == type(IERC1155Receiver).interfaceId ||
             super.supportsInterface(interfaceId);
     }
 
     /**
-     * @dev See {IChancelor-name}.
+     * @dev See {IChancellor-name}.
      */
     function name() public view virtual override returns (string memory) {
         return _name;
     }
 
     /**
-     * @dev See {IChancelor-version}.
+     * @dev See {IChancellor-version}.
      */
     function version() public view virtual override returns (string memory) {
         return "1";
     }
 
     /**
-     * @dev See {IChancelor-hashProposal}.
+     * @dev See {IChancellor-hashProposal}.
      *
      * The proposal id is produced by hashing the ABI encoded `targets` array, the `values` array, the `calldatas` array
      * and the descriptionHash (bytes32 which itself is the keccak256 hash of the description string). This proposal id
      * can be produced from the proposal data which is part of the {ProposalCreated} event. It can even be computed in
      * advance, before the proposal is submitted.
      *
-     * Note that the chainId and the chancelor address are not part of the proposal id computation. Consequently, the
-     * same proposal (with same operation and same description) will have the same id if submitted on multiple chancelors
+     * Note that the chainId and the Chancellor address are not part of the proposal id computation. Consequently, the
+     * same proposal (with same operation and same description) will have the same id if submitted on multiple Chancellors
      * across multiple networks. This also means that in order to execute the same operation twice (on the same
-     * chancelor) the proposer will have to change the description in order to avoid proposal id conflicts.
+     * Chancellor) the proposer will have to change the description in order to avoid proposal id conflicts.
      */
     function hashProposal(
         address[] memory targets,
@@ -168,7 +168,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev See {IChancelor-state}.
+     * @dev See {IChancellor-state}.
      */
     function state(uint256 proposalId)
         public
@@ -190,7 +190,7 @@ abstract contract Chancelor is
         uint256 snapshot = proposalSnapshot(proposalId);
 
         if (snapshot == 0) {
-            revert("Chancelor: unknown proposal id");
+            revert("Chancellor: unknown proposal id");
         }
 
         if (snapshot >= block.number) {
@@ -211,7 +211,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev See {IChancelor-proposalSnapshot}.
+     * @dev See {IChancellor-proposalSnapshot}.
      */
     function proposalSnapshot(uint256 proposalId)
         public
@@ -224,7 +224,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev See {IChancelor-proposalDeadline}.
+     * @dev See {IChancellor-proposalDeadline}.
      */
     function proposalDeadline(uint256 proposalId)
         public
@@ -248,7 +248,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev Part of the Chancelor Bravo's interface: _"The number of votes required in order for a voter to become a proposer"_.
+     * @dev Part of the Chancellor Bravo's interface: _"The number of votes required in order for a voter to become a proposer"_.
      */
     function proposalThreshold() public view virtual returns (uint256) {
         return 0;
@@ -323,7 +323,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev See {IChancelor-propose}.
+     * @dev See {IChancellor-propose}.
      */
     function propose(
         address[] memory targets,
@@ -335,7 +335,8 @@ abstract contract Chancelor is
             uint256 currProposalThreshol,
             uint256 currVotingDelay,
             uint256 currVotingPeriod,
-            address[] memory representation
+            address[] memory representation,
+            uint256 memberVotingPower
         ) = getSettings();
 
         return
@@ -347,12 +348,13 @@ abstract contract Chancelor is
                 currProposalThreshol,
                 currVotingDelay.toUint64(),
                 currVotingPeriod.toUint64(),
-                representation
+                representation,
+                memberVotingPower
             );
     }
 
     /**
-     * @dev See {IChancelor-propose}.
+     * @dev See {IChancellor-propose}.
      */
     function _propose(
         address[] memory targets,
@@ -362,11 +364,12 @@ abstract contract Chancelor is
         uint256 currProposalThreshold,
         uint64 _votingDelay,
         uint64 votingPeriod,
-        address[] memory representation
+        address[] memory representation,
+        uint256 _senatorVotingPower
     ) private returns (uint256) {
         require(
-            getVotes(_msgSender(), block.number - 1) >= currProposalThreshold,
-            "Chancelor: proposer votes below proposal threshold"
+            _senatorVotingPower >= currProposalThreshold,
+            "Chancellor: proposer votes below proposal threshold"
         );
 
         uint256 proposalId = hashProposal(
@@ -378,18 +381,18 @@ abstract contract Chancelor is
 
         require(
             targets.length == values.length,
-            "Chancelor: invalid proposal length"
+            "Chancellor: invalid proposal length"
         );
         require(
             targets.length == calldatas.length,
-            "Chancelor: invalid proposal length"
+            "Chancellor: invalid proposal length"
         );
-        require(targets.length > 0, "Chancelor: empty proposal");
+        require(targets.length > 0, "Chancellor: empty proposal");
 
         //ProposalCore storage proposal = _proposals[proposalId];
         require(
             _proposals[proposalId].voteStart.isUnset(),
-            "Chancelor: proposal already exists"
+            "Chancellor: proposal already exists"
         );
 
         uint64 snapshot = block.number.toUint64() + _votingDelay;
@@ -416,7 +419,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev See {IChancelor-execute}.
+     * @dev See {IChancellor-execute}.
      */
     function execute(
         address[] memory targets,
@@ -433,17 +436,17 @@ abstract contract Chancelor is
 
         require(
             _validateMembers(_proposals[proposalId].representation),
-            "Chancelor::Proposal have inapt members"
+            "Chancellor::Proposal have inapt members"
         );
         require(
             _validateSenator(_proposals[proposalId].proposer),
-            "Chancelor::Proposer Banned or Quarantined"
+            "Chancellor::Proposer Banned or Quarantined"
         );
 
         ProposalState status = state(proposalId);
         require(
             status == ProposalState.Succeeded || status == ProposalState.Queued,
-            "Chancelor: proposal not successful"
+            "Chancellor: proposal not successful"
         );
         _proposals[proposalId].executed = true;
 
@@ -466,7 +469,8 @@ abstract contract Chancelor is
         bytes[] memory calldatas,
         bytes32 /*descriptionHash*/
     ) internal virtual {
-        string memory errorMessage = "Chancelor: call reverted without message";
+        string
+            memory errorMessage = "Chancellor: call reverted without message";
         for (uint256 i = 0; i < targets.length; ++i) {
             (bool success, bytes memory returndata) = targets[i].call{
                 value: values[i]
@@ -488,7 +492,7 @@ abstract contract Chancelor is
         if (_executor() != address(this)) {
             for (uint256 i = 0; i < targets.length; ++i) {
                 if (targets[i] == address(this)) {
-                    _chancelorCall.pushBack(keccak256(calldatas[i]));
+                    _ChancellorCall.pushBack(keccak256(calldatas[i]));
                 }
             }
         }
@@ -505,8 +509,8 @@ abstract contract Chancelor is
         bytes32 /*descriptionHash*/
     ) internal virtual {
         if (_executor() != address(this)) {
-            if (!_chancelorCall.empty()) {
-                _chancelorCall.clear();
+            if (!_ChancellorCall.empty()) {
+                _ChancellorCall.clear();
             }
         }
     }
@@ -515,7 +519,7 @@ abstract contract Chancelor is
      * @dev Internal cancel mechanism: locks up the proposal timer, preventing it from being re-submitted. Marks it as
      * canceled to allow distinguishing it from executed proposals.
      *
-     * Emits a {IChancelor-ProposalCanceled} event.
+     * Emits a {IChancellor-ProposalCanceled} event.
      */
     function _cancel(
         address[] memory targets,
@@ -535,7 +539,7 @@ abstract contract Chancelor is
             status != ProposalState.Canceled &&
                 status != ProposalState.Expired &&
                 status != ProposalState.Executed,
-            "Chancelor: proposal not active"
+            "Chancellor: proposal not active"
         );
         _proposals[proposalId].canceled = true;
 
@@ -545,7 +549,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev See {IChancelor-getVotes}.
+     * @dev See {IChancellor-getVotes}.
      */
     function getVotes(address account, uint256 blockNumber)
         public
@@ -558,7 +562,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev See {IChancelor-getVotesWithParams}.
+     * @dev See {IChancellor-getVotesWithParams}.
      */
     function getVotesWithParams(
         address account,
@@ -569,7 +573,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev See {IChancelor-castVote}.
+     * @dev See {IChancellor-castVote}.
      */
     function castVote(uint256 proposalId, uint8 support)
         public
@@ -582,7 +586,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev See {IChancelor-castVoteWithReason}.
+     * @dev See {IChancellor-castVoteWithReason}.
      */
     function castVoteWithReason(
         uint256 proposalId,
@@ -594,7 +598,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev See {IChancelor-castVoteWithReasonAndParams}.
+     * @dev See {IChancellor-castVoteWithReasonAndParams}.
      */
     function castVoteWithReasonAndParams(
         uint256 proposalId,
@@ -607,7 +611,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev See {IChancelor-castVoteBySig}.
+     * @dev See {IChancellor-castVoteBySig}.
      */
     function castVoteBySig(
         uint256 proposalId,
@@ -628,7 +632,7 @@ abstract contract Chancelor is
     }
 
     /**
-     * @dev See {IChancelor-castVoteWithReasonAndParamsBySig}.
+     * @dev See {IChancellor-castVoteWithReasonAndParamsBySig}.
      */
     function castVoteWithReasonAndParamsBySig(
         uint256 proposalId,
@@ -661,9 +665,9 @@ abstract contract Chancelor is
 
     /**
      * @dev Internal vote casting mechanism: Check that the vote is pending, that it has not been cast yet, retrieve
-     * voting weight using {IChancelor-getVotes} and call the {_countVote} internal function. Uses the _defaultParams().
+     * voting weight using {IChancellor-getVotes} and call the {_countVote} internal function. Uses the _defaultParams().
      *
-     * Emits a {IChancelor-VoteCast} event.
+     * Emits a {IChancellor-VoteCast} event.
      */
     function _castVote(
         uint256 proposalId,
@@ -677,9 +681,9 @@ abstract contract Chancelor is
 
     /**
      * @dev Internal vote casting mechanism: Check that the vote is pending, that it has not been cast yet, retrieve
-     * voting weight using {IChancelor-getVotes} and call the {_countVote} internal function.
+     * voting weight using {IChancellor-getVotes} and call the {_countVote} internal function.
      *
-     * Emits a {IChancelor-VoteCast} event.
+     * Emits a {IChancellor-VoteCast} event.
      */
     function _castVote(
         uint256 proposalId,
@@ -691,7 +695,7 @@ abstract contract Chancelor is
         ProposalCore storage proposal = _proposals[proposalId];
         require(
             state(proposalId) == ProposalState.Active,
-            "Chancelor: vote not currently active"
+            "Chancellor: vote not currently active"
         );
 
         uint256 weight = _getVotes(
@@ -719,20 +723,20 @@ abstract contract Chancelor is
 
     /**
      * @dev Relays a transaction or function call to an arbitrary target. In cases where the governance executor
-     * is some contract other than the chancelor itself, like when using a timelock, this function can be invoked
-     * in a governance proposal to recover tokens or Ether that was sent to the chancelor contract by mistake.
-     * Note that if the executor is simply the chancelor itself, use of `relay` is redundant.
+     * is some contract other than the Chancellor itself, like when using a timelock, this function can be invoked
+     * in a governance proposal to recover tokens or Ether that was sent to the Chancellor contract by mistake.
+     * Note that if the executor is simply the Chancellor itself, use of `relay` is redundant.
      */
     function relay(
         address target,
         uint256 value,
         bytes calldata data
-    ) external virtual onlyChancelor {
+    ) external virtual onlyChancellor {
         Address.functionCallWithValue(target, data, value);
     }
 
     /**
-     * @dev Address through which the chancelor executes action. Will be overloaded by module that execute actions
+     * @dev Address through which the Chancellor executes action. Will be overloaded by module that execute actions
      * through another contract such as a timelock.
      */
     function _executor() internal view virtual returns (address) {

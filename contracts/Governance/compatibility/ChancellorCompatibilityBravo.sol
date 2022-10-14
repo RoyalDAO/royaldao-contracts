@@ -4,24 +4,24 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "../extensions/IChancelorTimelock.sol";
-import "../Chancelor.sol";
-import "./IChancelorCompatibilityBravo.sol";
+import "../extensions/IChancellorTimelock.sol";
+import "../Chancellor.sol";
+import "./IChancellorCompatibilityBravo.sol";
 
 /**
- * @dev Compatibility layer that implements GovernorBravo compatibility on to of {Chancelor}.
+ * @dev Compatibility layer that implements GovernorBravo compatibility on to of {Chancellor}.
  *
- * This compatibility layer includes a voting system and requires a {IChancelorTimelock} compatible module to be added
+ * This compatibility layer includes a voting system and requires a {IChancellorTimelock} compatible module to be added
  * through inheritance. It does not include token bindings, not does it include any variable upgrade patterns.
  *
  * NOTE: When using this module, you may need to enable the Solidity optimizer to avoid hitting the contract size limit.
  *
  * _Available since v4.3._
  */
-abstract contract ChancelorCompatibilityBravo is
-    IChancelorTimelock,
-    IChancelorCompatibilityBravo,
-    Chancelor
+abstract contract ChancellorCompatibilityBravo is
+    IChancellorTimelock,
+    IChancellorCompatibilityBravo,
+    Chancellor
 {
     enum VoteType {
         Against,
@@ -64,7 +64,7 @@ abstract contract ChancelorCompatibilityBravo is
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description
-    ) public virtual override(IChancelor, Chancelor) returns (uint256) {
+    ) public virtual override(IChancellor, Chancellor) returns (uint256) {
         _storeProposal(
             _msgSender(),
             targets,

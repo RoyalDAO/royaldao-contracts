@@ -3,14 +3,14 @@
 
 pragma solidity ^0.8.0;
 
-import "../IChancelor.sol";
+import "../IChancellor.sol";
 
 /**
- * @dev Extension of the {IChancelor} for timelock supporting modules.
+ * @dev Extension of the {IChancellor} for timelock supporting modules.
  *
  * _Available since v4.3._
  */
-abstract contract IChancelorSenate is IChancelor {
+abstract contract IChancellorSenate is IChancellor {
     /**
      * @dev Emitted when the senate controller used for members control is modified.
      */

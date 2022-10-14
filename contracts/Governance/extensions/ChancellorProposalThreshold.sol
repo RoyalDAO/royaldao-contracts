@@ -3,7 +3,7 @@
 
 pragma solidity ^0.8.0;
 
-import "../Chancelor.sol";
+import "../Chancellor.sol";
 
 /**
  * @dev Extension of {Governor} for proposal restriction to token holders with a minimum balance.
@@ -11,7 +11,7 @@ import "../Chancelor.sol";
  * _Available since v4.3._
  * _Deprecated since v4.4._
  */
-abstract contract ChancelorProposalThreshold is Chancelor {
+abstract contract ChancellorProposalThreshold is Chancellor {
     function propose(
         address[] memory targets,
         uint256[] memory values,

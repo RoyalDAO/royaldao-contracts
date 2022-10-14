@@ -6,15 +6,15 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 /**
- * @dev Interface of the {Chancelor} core.
+ * @dev Interface of the {Chancellor} core.
  *
  * _Available since v4.3._
- * IChancelorUpgradeable.sol modifies OpenZeppelin's IGovernorUpgradeable.sol:
+ * IChancellorUpgradeable.sol modifies OpenZeppelin's IGovernorUpgradeable.sol:
  * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/master/contracts/governance/IGovernorUpgradeable.sol
  * IGovernorUpgradeable.sol source code copyright OpenZeppelin licensed under the MIT License.
  * Modified by QueenE DAO.
  */
-abstract contract IChancelor is IERC165 {
+abstract contract IChancellor is IERC165 {
     enum ProposalState {
         Pending,
         Active,
@@ -81,13 +81,13 @@ abstract contract IChancelor is IERC165 {
 
     /**
      * @notice module:core
-     * @dev Name of the chancelor instance (used in building the ERC712 domain separator).
+     * @dev Name of the Chancellor instance (used in building the ERC712 domain separator).
      */
     function name() public view virtual returns (string memory);
 
     /**
      * @notice module:core
-     * @dev Version of the chancelor instance (used in building the ERC712 domain separator). Default: "1"
+     * @dev Version of the Chancellor instance (used in building the ERC712 domain separator). Default: "1"
      */
     function version() public view virtual returns (string memory);
 
@@ -193,7 +193,8 @@ abstract contract IChancelor is IERC165 {
             uint256 proposalThreshold,
             uint256 votingDelay,
             uint256 votingPeriod,
-            address[] memory senatorRepresentations
+            address[] memory senatorRepresentations,
+            uint256 votingPower
         );
 
     /**
