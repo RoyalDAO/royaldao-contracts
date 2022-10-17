@@ -107,8 +107,10 @@ abstract contract ChancellorSenateControl is IChancellorSenate, Chancellor {
             uint256 currProposalThreshold,
             uint256 currVotingDelay,
             uint256 currVotingPeriod,
-            address[] memory senatorRepresentations,
-            uint256 votingPower
+            uint32[] memory senatorRepresentations,
+            uint256 votingPower,
+            bool validSenator,
+            bool validMembers
         )
     {
         return _senate.getSettings(msg.sender);
@@ -128,7 +130,7 @@ abstract contract ChancellorSenateControl is IChancellorSenate, Chancellor {
     /**
      * Validate a list of Members
      */
-    function _validateMembers(address[] memory members)
+    function _validateMembers(uint32[] memory members)
         internal
         view
         virtual

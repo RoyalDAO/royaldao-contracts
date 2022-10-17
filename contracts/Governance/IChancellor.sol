@@ -193,8 +193,10 @@ abstract contract IChancellor is IERC165 {
             uint256 proposalThreshold,
             uint256 votingDelay,
             uint256 votingPeriod,
-            address[] memory senatorRepresentations,
-            uint256 votingPower
+            uint32[] memory senatorRepresentations,
+            uint256 votingPower,
+            bool validSenator,
+            bool validMembers
         );
 
     /**

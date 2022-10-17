@@ -65,7 +65,7 @@ abstract contract ISenate is IERC165 {
     /**
      * @dev Check if all members from list are valid.
      */
-    function validateMembers(address[] calldata members)
+    function validateMembers(uint32[] calldata members)
         external
         view
         virtual
@@ -75,7 +75,7 @@ abstract contract ISenate is IERC165 {
      * @dev Check if senator is active.
      */
     function validateSenator(address senator)
-        public
+        external
         view
         virtual
         returns (bool);
@@ -104,4 +104,13 @@ abstract contract ISenate is IERC165 {
      * quorum depending on values such as the totalSupply of a token at this block (see {ERC20Votes}).
      */
     function quorum(uint256 blockNumber) public view virtual returns (uint256);
+
+    /**
+     * @dev Get the current senator representation.
+     */
+    function getRepresentation(address account)
+        external
+        view
+        virtual
+        returns (uint32[] memory);
 }

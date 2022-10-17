@@ -55,7 +55,7 @@ abstract contract Chancellor is
 
     struct ProposalCore {
         address proposer;
-        address[] representation;
+        uint32[] representation;
         Timers.BlockNumber voteStart;
         Timers.BlockNumber voteEnd;
         bool executed;
@@ -211,6 +211,22 @@ abstract contract Chancellor is
     }
 
     /**
+     * @dev returns the list of members representing the proposal.
+     */
+    function proposalRepresentations(uint256 proposalId)
+        external
+        view
+        returns (uint32[] memory)
+    {
+        return _proposals[proposalId].representation;
+        //return
+        //    _proposalRepresentations(
+        //        _proposals[proposalId].proposer,
+        //        proposalSnapshot(proposalId)
+        //    );
+    }
+
+    /**
      * @dev See {IChancellor-proposalSnapshot}.
      */
     function proposalSnapshot(uint256 proposalId)
@@ -234,17 +250,6 @@ abstract contract Chancellor is
         returns (uint256)
     {
         return _proposals[proposalId].voteEnd.getDeadline();
-    }
-
-    /**
-     * @dev returns the list of members representing the proposal.
-     */
-    function proposalRepresentations(uint256 proposalId)
-        external
-        view
-        returns (address[] memory)
-    {
-        return _proposals[proposalId].representation;
     }
 
     /**
@@ -284,7 +289,7 @@ abstract contract Chancellor is
     /**
      * Validate a list of Members
      */
-    function _validateMembers(address[] memory members)
+    function _validateMembers(uint32[] memory members)
         internal
         view
         virtual
@@ -335,9 +340,17 @@ abstract contract Chancellor is
             uint256 currProposalThreshol,
             uint256 currVotingDelay,
             uint256 currVotingPeriod,
-            address[] memory representation,
-            uint256 memberVotingPower
+            uint32[] memory representation,
+            uint256 memberVotingPower,
+            bool validSenator,
+            bool validMembers
         ) = getSettings();
+
+        require(validSenator, "Chancellor::Senator in quarantine or banned");
+        require(
+            validMembers,
+            "Chancellor::Senator represents one or more inapt Members"
+        );
 
         return
             _propose(
@@ -364,7 +377,7 @@ abstract contract Chancellor is
         uint256 currProposalThreshold,
         uint64 _votingDelay,
         uint64 votingPeriod,
-        address[] memory representation,
+        uint32[] memory representation,
         uint256 _senatorVotingPower
     ) private returns (uint256) {
         require(

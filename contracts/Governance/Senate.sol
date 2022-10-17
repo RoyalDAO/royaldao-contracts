@@ -11,6 +11,9 @@ import "@openzeppelin/contracts/utils/Timers.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./ISenate.sol";
 import "../Governance/utils/ISenatorVotes.sol";
 
@@ -24,6 +27,7 @@ import "../Governance/utils/ISenatorVotes.sol";
 abstract contract Senate is Context, ERC165, EIP712, ISenate {
     //TODO: Complex votes for single vote by token
     using EnumerableSet for EnumerableSet.AddressSet;
+    using Counters for Counters.Counter;
 
     EnumerableSet.AddressSet internal tokens;
     EnumerableSet.AddressSet internal oldDogsTokens;
@@ -32,10 +36,17 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
 
     address public Chancellor;
 
+    Counters.Counter private memberCounter;
     uint256 public quarantinePeriod;
 
-    mapping(address => uint256) internal memberInQuarantine;
-    mapping(address => uint256) internal senatorInQuarantine;
+    mapping(address => uint32) internal memberId;
+    mapping(uint32 => address) internal idMember;
+
+    uint32[] internal memberInQuarantine;
+    uint32[] internal senatorInQuarantine;
+
+    mapping(address => uint256) internal memberQuarantine;
+    mapping(address => uint256) internal senatorQuarantine;
 
     string private _name;
 
@@ -104,17 +115,33 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
                     type(ISenatorVotes).interfaceId
                 )
             ) {
-                if (!tokens.contains(_tokens[idx])) tokens.add(_tokens[idx]);
+                if (!tokens.contains(_tokens[idx])) {
+                    memberCounter.increment();
+                    memberId[_tokens[idx]] = SafeCast.toUint32(
+                        memberCounter.current()
+                    );
+                    idMember[
+                        SafeCast.toUint32(memberCounter.current())
+                    ] = _tokens[idx];
+
+                    tokens.add(_tokens[idx]);
+                }
             } else if (
-                IERC165(_tokens[idx]).supportsInterface(
-                    type(IVotes).interfaceId
-                ) ||
                 IERC165(_tokens[idx]).supportsInterface(
                     type(IVotes).interfaceId
                 )
             ) {
-                if (!oldDogsTokens.contains(_tokens[idx]))
+                if (!oldDogsTokens.contains(_tokens[idx])) {
+                    memberCounter.increment();
+                    memberId[_tokens[idx]] = SafeCast.toUint32(
+                        memberCounter.current()
+                    );
+                    idMember[
+                        SafeCast.toUint32(memberCounter.current())
+                    ] = _tokens[idx];
+
                     oldDogsTokens.add(_tokens[idx]);
+                }
             } else revert("SenateUpgradeable::Invalid implementation!");
         }
     }
@@ -137,13 +164,21 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         return oldDogsTokens.values();
     }
 
+    function getMemberId(address member) external view returns (uint32) {
+        return memberId[member];
+    }
+
+    function getMemberOfId(uint32 _memberId) external view returns (address) {
+        return idMember[_memberId];
+    }
+
     function senateMemberStatus(address _tokenAddress)
         public
         view
         override
         returns (membershipStatus)
     {
-        if (memberInQuarantine[_tokenAddress] >= block.number) {
+        if (memberQuarantine[_tokenAddress] >= block.number) {
             return membershipStatus.QUARANTINE_MEMBER;
         } else if (banned.contains(_tokenAddress)) {
             return membershipStatus.BANNED_MEMBER;
@@ -155,40 +190,6 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         } else return membershipStatus.NOT_MEMBER;
     }
 
-    /*********************************************** \/ Senate house keeping ***************************************************/
-
-    function acceptToSenate(address _token) external virtual onlyChancellor {
-        _acceptToSenate(_token);
-    }
-
-    function quarantineUntil(address _token) external view returns (uint256) {
-        return memberInQuarantine[_token];
-    }
-
-    function banFromSenate(address _token) external virtual onlyChancellor {
-        _banFromSenate(_token);
-    }
-
-    function quarantineFromSenate(address _token) external virtual;
-
-    function quarantineSenator(address _senator) external virtual;
-
-    function senatorQuarantineUntil(address _senator)
-        external
-        view
-        returns (uint256)
-    {
-        return senatorInQuarantine[_senator];
-    }
-
-    function banSenatorFromSenate(address _senator)
-        external
-        virtual
-        onlyChancellor
-    {
-        _banSenatorFromSenate(_senator);
-    }
-
     function _acceptToSenate(address _token) internal {
         require(!banned.contains(_token), "Senate::Banned are Exiled");
 
@@ -196,6 +197,10 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
             IERC165(_token).supportsInterface(type(ISenatorVotes).interfaceId)
         ) {
             if (!tokens.contains(_token)) {
+                memberCounter.increment();
+                memberId[_token] = SafeCast.toUint32(memberCounter.current());
+                idMember[SafeCast.toUint32(memberCounter.current())] = _token;
+
                 tokens.add(_token);
                 //must sync senate books
                 writeMemberToSenateBooks(_token);
@@ -203,14 +208,21 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         } else if (
             IERC165(_token).supportsInterface(type(IVotes).interfaceId)
         ) {
-            if (!oldDogsTokens.contains(_token)) oldDogsTokens.add(_token);
+            if (!oldDogsTokens.contains(_token)) {
+                memberCounter.increment();
+                memberId[_token] = SafeCast.toUint32(memberCounter.current());
+                idMember[SafeCast.toUint32(memberCounter.current())] = _token;
+
+                oldDogsTokens.add(_token);
+            }
         } else revert("Senate::Invalid implementation!");
     }
 
     function _quarantineFromSenate(address _token) internal {
         require(!banned.contains(_token), "SenateUpgradeable::Already Banned");
 
-        memberInQuarantine[_token] = block.number + quarantinePeriod;
+        memberQuarantine[_token] = block.number + quarantinePeriod;
+        //TODO:: get member votings off totalSupply
 
         emit MemberQuarantined(_token);
     }
@@ -232,7 +244,8 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
             "SenateUpgradeable::Already Banned"
         );
 
-        senatorInQuarantine[_senator] = block.number + quarantinePeriod;
+        senatorQuarantine[_senator] = block.number + quarantinePeriod;
+        //TODO:: get senator votings off totalSupply
 
         emit SenatorQuarantined(_senator);
     }
@@ -274,7 +287,80 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         }
     }
 
-    /*********************************************** /\ Senate house keeping ***************************************************/
+    /**
+     * @dev Check if all members from list are valid.
+     */
+    function _validateMembers(uint32[] memory members)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
+        for (uint256 idx = 0; idx < members.length; idx++) {
+            if (!_validateMember(members[idx])) return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @dev Check if a given member is valid.
+     */
+    function _validateMember(uint32 member)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
+        if (
+            banned.contains(idMember[member]) ||
+            memberQuarantine[idMember[member]] >= block.number
+        ) return false;
+        return true;
+    }
+
+    /**
+     * @dev Check if all members from list are valid.
+     */
+    function validateMembers(uint32[] memory members)
+        external
+        view
+        virtual
+        override
+        returns (bool)
+    {
+        return _validateMembers(members);
+    }
+
+    /**
+     * @dev Check if senator is active.
+     */
+    function _validateSenator(address senator)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
+        if (
+            senatorBanned.contains(senator) ||
+            senatorQuarantine[senator] >= block.number
+        ) return false;
+
+        return true;
+    }
+
+    /**
+     * @dev Check if senator is active.
+     */
+    function validateSenator(address senator)
+        external
+        view
+        virtual
+        override
+        returns (bool)
+    {
+        return _validateSenator(senator);
+    }
 
     /**
      * @dev Part of the Chancellor Bravo's interface: _"The number of votes required in order for a voter to become a proposer"_.
@@ -283,7 +369,97 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         return 0;
     }
 
-    /*********************************************** \/ Functions that contract must implement ***********************************************/
+    function acceptToSenate(address _token) external virtual onlyChancellor {
+        _acceptToSenate(_token);
+    }
+
+    function quarantineUntil(address _token) external view returns (uint256) {
+        return memberQuarantine[_token];
+    }
+
+    function banFromSenate(address _token) external virtual onlyChancellor {
+        _banFromSenate(_token);
+    }
+
+    function senatorQuarantineUntil(address _senator)
+        external
+        view
+        returns (uint256)
+    {
+        return senatorQuarantine[_senator];
+    }
+
+    function banSenatorFromSenate(address _senator)
+        external
+        virtual
+        onlyChancellor
+    {
+        _banSenatorFromSenate(_senator);
+    }
+
+    /**
+     * @dev Get the voting weight of `account` at a specific `blockNumber`, for a vote as described by `params`.
+     */
+    function getVotes(
+        address account,
+        uint256 blockNumber,
+        bytes memory params
+    ) external view virtual returns (uint256) {
+        return _getVotes(account, blockNumber, params);
+    }
+
+    /**
+     * @dev Get the total voting supply at latest `blockNumber`.
+     */
+    function getTotalSuply() external view virtual returns (uint256) {
+        return _getTotalSuply();
+    }
+
+    /**
+     * @dev Update Senate Voting Books.
+     */
+    function transferVotingUnits(
+        address from,
+        address to,
+        uint256 amount,
+        bool isSenator
+    ) external virtual override onlyValidMember {
+        _transferVotingUnits(msg.sender, from, to, amount, isSenator);
+    }
+
+    /**
+     * @dev Get the current senator representation.
+     */
+    function getRepresentation(address account)
+        external
+        view
+        virtual
+        override
+        returns (uint32[] memory)
+    {
+        return _getRepresentation(account);
+    }
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(IERC165, ERC165)
+        returns (bool)
+    {
+        return
+            interfaceId == type(ISenate).interfaceId ||
+            super.supportsInterface(interfaceId);
+    }
+
+    /*** \/ Functions that contract must implement ******************************************************************/
+
+    function quarantineFromSenate(address _token) external virtual;
+
+    function quarantineSenator(address _senator) external virtual;
 
     /**
      * @dev Get the voting weight of `account` at a specific `blockNumber`, for a vote as described by `params`.
@@ -317,15 +493,17 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
             uint256 proposalThreshold,
             uint256 votingDelay,
             uint256 votingPeriod,
-            address[] memory senatorRepresentations,
-            uint256 votingPower
+            uint32[] memory senatorRepresentations,
+            uint256 votingPower,
+            bool validSenator,
+            bool validMembers
         );
 
     function _getRepresentation(address account)
         internal
         view
         virtual
-        returns (address[] memory);
+        returns (uint32[] memory);
 
     /**
      * @dev Transfers, mints, or burns voting units. To register a mint, `from` should be zero. To register a burn, `to`
@@ -343,113 +521,52 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
 
     function _burnMemberVotings(address member) internal virtual;
 
-    /*********************************************** /\ Functions that contract must implement ***********************************************/
+    /*** /\ Functions that contract must implement ******************************************************************/
 
-    /**
-     * @dev Get the voting weight of `account` at a specific `blockNumber`, for a vote as described by `params`.
-     */
-    function getVotes(
-        address account,
-        uint256 blockNumber,
-        bytes memory params
-    ) external view virtual returns (uint256) {
-        return _getVotes(account, blockNumber, params);
-    }
+    function assign_int64_storage_from_bytes(
+        int64[] storage to,
+        bytes memory from
+    ) internal {
+        // Resize the destination array. Since we're writing the code for int64, we use 8 bytes per value.
+        //to.length = from.length / 8;
 
-    /**
-     * @dev Get the total voting supply at last `blockNumber`.
-     */
-    function getTotalSuply() external view virtual returns (uint256) {
-        return _getTotalSuply();
-    }
-
-    /**
-     * @dev Update Senate Voting Books.
-     */
-    function transferVotingUnits(
-        address from,
-        address to,
-        uint256 amount,
-        bool isSenator
-    ) external virtual override onlyValidMember {
-        _transferVotingUnits(msg.sender, from, to, amount, isSenator);
-    }
-
-    /**
-     * @dev Get the current senator representation.
-     */
-    function getRepresentation(address account)
-        external
-        view
-        virtual
-        returns (address[] memory)
-    {
-        return _getRepresentation(account);
-    }
-
-    /**
-     * @dev Check if all members from list are valid.
-     */
-    function validateMembers(address[] memory members)
-        public
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        for (uint256 idx = 0; idx < members.length; idx++) {
-            if (!_validateMember(members[idx])) return false;
+        // Compute the base location of array's data by taking SHA3 of its position (slot)
+        uint256 addr;
+        bytes32 base;
+        assembly {
+            // keccak256 works on memory, so we have to save the number of the array's slot
+            // to a memory variable
+            mstore(addr, to.slot)
+            base := keccak256(addr, 32)
         }
 
-        return true;
-    }
+        uint256 i = 0;
+        for (uint256 offset = 0; offset < from.length; offset += 32) {
+            // Load a 32-byte word from the source array
+            // Don't forget to skip the first 32 bytes - in memory arrays, array's length is located
+            // just before the data!
+            uint256 tmp;
+            assembly {
+                tmp := mload(add(from, add(offset, 32)))
+            }
 
-    /**
-     * @dev Check if a given member is valid.
-     */
-    function _validateMember(address member)
-        internal
-        view
-        virtual
-        returns (bool)
-    {
-        if (
-            banned.contains(member) ||
-            memberInQuarantine[member] >= block.number
-        ) return false;
-        return true;
-    }
+            // Reverse bytes order. I guess you can do it much more optimally, but thi is more understandable.
+            for (uint256 b = 0; b < 16; ++b) {
+                uint256 shift = b * 8;
+                uint256 shift2 = (256 - (b + 1) * 8);
 
-    /**
-     * @dev Check if senator is active.
-     */
-    function validateSenator(address senator)
-        public
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        if (
-            senatorBanned.contains(senator) ||
-            senatorInQuarantine[senator] >= block.number
-        ) return false;
+                uint256 low = (tmp & (0xFF << shift)) >> shift;
+                uint256 high = (tmp & (0xFF << shift2)) >> shift2;
 
-        return true;
-    }
+                tmp = tmp & ~((0xFF << shift) | (0xFF << shift2));
+                tmp = tmp | (low << shift2) | (high << shift);
+            }
 
-    /**
-     * @dev See {IERC165-supportsInterface}.
-     */
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(IERC165, ERC165)
-        returns (bool)
-    {
-        return
-            interfaceId == type(ISenate).interfaceId ||
-            super.supportsInterface(interfaceId);
+            // Store the data in the storage
+            assembly {
+                sstore(add(base, i), tmp)
+            }
+            i += 1;
+        }
     }
 }

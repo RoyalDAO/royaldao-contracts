@@ -71,16 +71,21 @@ abstract contract SenateSettings is Senate {
             uint256 currProposalThreshold,
             uint256 currVotingDelay,
             uint256 currVotingPeriod,
-            address[] memory senatorRepresentations,
-            uint256 votingPower
+            uint32[] memory senatorRepresentations,
+            uint256 votingPower,
+            bool validSenator,
+            bool validMembers
         )
     {
+        uint32[] memory representations = _getRepresentation(account);
         return (
             _proposalThreshold,
             _votingDelay,
             _votingPeriod,
-            _getRepresentation(account),
-            _getVotes(account, block.number - 1, "")
+            representations,
+            _getVotes(account, block.number - 1, ""),
+            _validateSenator(account),
+            _validateMembers(representations)
         );
     }
 
