@@ -14,6 +14,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Timers.sol";
 import "./IChancellor.sol";
+import "../Utils/ArrayBytes.sol";
 
 /**
  * @dev Core of the senate system, designed to be extended though various modules.
@@ -45,6 +46,7 @@ abstract contract Chancellor is
     using DoubleEndedQueue for DoubleEndedQueue.Bytes32Deque;
     using SafeCast for uint256;
     using Timers for Timers.BlockNumber;
+    using BytesArrayLib32 for bytes;
 
     bytes32 public constant BALLOT_TYPEHASH =
         keccak256("Ballot(uint256 proposalId,uint8 support)");
@@ -55,7 +57,7 @@ abstract contract Chancellor is
 
     struct ProposalCore {
         address proposer;
-        uint32[] representation;
+        bytes representation;
         Timers.BlockNumber voteStart;
         Timers.BlockNumber voteEnd;
         bool executed;
@@ -218,7 +220,7 @@ abstract contract Chancellor is
         view
         returns (uint32[] memory)
     {
-        return _proposals[proposalId].representation;
+        return _proposals[proposalId].representation.getArray();
         //return
         //    _proposalRepresentations(
         //        _proposals[proposalId].proposer,
@@ -289,7 +291,7 @@ abstract contract Chancellor is
     /**
      * Validate a list of Members
      */
-    function _validateMembers(uint32[] memory members)
+    function _validateMembers(bytes memory members)
         internal
         view
         virtual
@@ -337,10 +339,10 @@ abstract contract Chancellor is
         string memory description
     ) public virtual override returns (uint256) {
         (
-            uint256 currProposalThreshol,
+            uint256 currProposalThreshold,
             uint256 currVotingDelay,
             uint256 currVotingPeriod,
-            uint32[] memory representation,
+            bytes memory representation,
             uint256 memberVotingPower,
             bool validSenator,
             bool validMembers
@@ -358,11 +360,13 @@ abstract contract Chancellor is
                 values,
                 calldatas,
                 description,
-                currProposalThreshol,
-                currVotingDelay.toUint64(),
-                currVotingPeriod.toUint64(),
-                representation,
-                memberVotingPower
+                SenateSettings({
+                    currProposalThreshold: currProposalThreshold,
+                    currVotingDelay: currVotingDelay.toUint64(),
+                    currVotingPeriod: currVotingPeriod.toUint64(),
+                    representation: representation,
+                    memberVotingPower: memberVotingPower
+                })
             );
     }
 
@@ -374,14 +378,10 @@ abstract contract Chancellor is
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description,
-        uint256 currProposalThreshold,
-        uint64 _votingDelay,
-        uint64 votingPeriod,
-        uint32[] memory representation,
-        uint256 _senatorVotingPower
+        SenateSettings memory settings
     ) private returns (uint256) {
         require(
-            _senatorVotingPower >= currProposalThreshold,
+            settings.memberVotingPower >= settings.currProposalThreshold,
             "Chancellor: proposer votes below proposal threshold"
         );
 
@@ -408,13 +408,13 @@ abstract contract Chancellor is
             "Chancellor: proposal already exists"
         );
 
-        uint64 snapshot = block.number.toUint64() + _votingDelay;
-        uint64 deadline = snapshot + votingPeriod;
+        uint64 snapshot = block.number.toUint64() + settings.currVotingDelay;
+        uint64 deadline = snapshot + settings.currVotingPeriod;
 
         _proposals[proposalId].proposer = _msgSender();
         _proposals[proposalId].voteStart.setDeadline(snapshot);
         _proposals[proposalId].voteEnd.setDeadline(deadline);
-        _proposals[proposalId].representation = representation;
+        _proposals[proposalId].representation = settings.representation;
 
         emit ProposalCreated(
             proposalId,

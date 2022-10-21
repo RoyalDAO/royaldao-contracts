@@ -10,10 +10,10 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "../../Governance/utils/ISenatorVotes.sol";
 import "../../Utils/Checkpoints.sol";
 import "../../Utils/ArrayBytes.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @dev Extension of {Senate} for voting weight extraction from an {ERC721Votes} token.
@@ -24,9 +24,7 @@ abstract contract SenateVotes is Senate {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Checkpoints for Checkpoints.History;
     using Counters for Counters.Counter;
-    using BytesArrayLib for bytes;
-    using BytesArrayLib for uint32[];
-    using Strings for uint32;
+    using BytesArrayLib32 for bytes;
 
     /**
      * @dev Emitted when a token transfer or delegate change results in changes to a delegate's number of votes.
@@ -45,11 +43,8 @@ abstract contract SenateVotes is Senate {
 
     mapping(address => Checkpoints.History) internal _senateBooksCheckpoints;
 
-    //mapping(address => Checkpoints.History) internal _senateMemberSuply;
-
     Checkpoints.History internal _totalSenateBooksCheckpoints;
     //senator representations
-    mapping(address => uint32[]) internal _senatorRepresentations;
     mapping(address => bytes) internal _senatorRepresentationsBytes;
 
     mapping(address => Counters.Counter) internal _nonces;
@@ -69,9 +64,14 @@ abstract contract SenateVotes is Senate {
         uint256 blockNumber,
         bytes memory /*params*/
     ) internal view virtual override returns (uint256) {
-        uint256 totalVotes;
+        require(
+            _validateMembers(_senatorRepresentationsBytes[account]),
+            "SenateVotes::Representing Inapt Members"
+        );
 
         if (!_validateSenator(account)) return 0;
+
+        uint256 totalVotes;
 
         totalVotes += _senateBooksCheckpoints[account].getAtProbablyRecentBlock(
                 blockNumber
@@ -158,11 +158,7 @@ abstract contract SenateVotes is Senate {
 
         //call the old dogs
         for (uint256 idx = 0; idx < oldDogsTokens.values().length; idx++) {
-            if (
-                banned.contains(oldDogsTokens.values()[idx]) ||
-                memberQuarantine[oldDogsTokens.values()[idx]] >=
-                (block.number - 1)
-            ) continue;
+            if (!_validateMember(memberId[oldDogsTokens.at(idx)])) continue;
             _totalSuply += IVotes(oldDogsTokens.values()[idx])
                 .getPastTotalSupply(blockNumber);
         }
@@ -180,11 +176,7 @@ abstract contract SenateVotes is Senate {
 
         //call the old dogs
         for (uint256 idx = 0; idx < oldDogsTokens.values().length; idx++) {
-            if (
-                banned.contains(oldDogsTokens.values()[idx]) ||
-                memberQuarantine[oldDogsTokens.values()[idx]] >=
-                (block.number - 1)
-            ) continue;
+            if (!_validateMember(memberId[oldDogsTokens.at(idx)])) continue;
 
             _totalSuply += IVotes(oldDogsTokens.values()[idx])
                 .getPastTotalSupply(block.number - 1);
@@ -204,34 +196,20 @@ abstract contract SenateVotes is Senate {
         view
         virtual
         override
-        returns (uint32[] memory)
+        returns (bytes memory)
     {
-        if (
-            senatorBanned.contains(account) ||
-            senatorQuarantine[account] >= (block.number)
-        ) return new uint32[](0);
+        bytes memory representationBytes;
+        if (!_validateSenator(account)) return representationBytes;
 
-        uint32[] memory pastRepresentation = _senatorRepresentationsBytes[
-            account
-        ].getArrayUint32();
-        //convert
+        representationBytes = _senatorRepresentationsBytes[account];
+
         if (oldDogsTokens.length() == 0) {
-            return pastRepresentation;
-            //return _senatorRepresentationsBytes[account].getArrayUint32();
-            //return _senatorRepresentations[account];
+            return representationBytes;
         }
 
-        uint32[] memory oldDogRepresentations = new uint32[](
-            oldDogsTokens.length()
-        );
-
-        uint256 nextOnList = 0;
         //call the old dogs
         for (uint256 idx = 0; idx < oldDogsTokens.values().length; idx++) {
-            if (
-                banned.contains(oldDogsTokens.values()[idx]) ||
-                memberQuarantine[oldDogsTokens.values()[idx]] >= (block.number)
-            ) continue;
+            if (!_validateMember(memberId[oldDogsTokens.at(idx)])) continue;
 
             if (
                 IVotes(oldDogsTokens.values()[idx]).getPastVotes(
@@ -239,29 +217,12 @@ abstract contract SenateVotes is Senate {
                     block.number - 1
                 ) > 0
             )
-                oldDogRepresentations[nextOnList++] = memberId[
-                    oldDogsTokens.values()[idx]
-                ];
+                representationBytes = representationBytes.insert(
+                    memberId[oldDogsTokens.values()[idx]]
+                );
         }
 
-        //uint32[] memory pastRepresentation = _senatorRepresentationsBytes[
-        //    account
-        //].getArrayUint32(); //_senatorRepresentations[account];
-
-        uint32[] memory representations = new uint32[](
-            oldDogRepresentations.length + pastRepresentation.length
-        );
-
-        nextOnList = 0;
-        for (uint256 idx = 0; idx < oldDogRepresentations.length; idx++) {
-            representations[nextOnList++] = oldDogRepresentations[idx];
-        }
-
-        for (uint256 idx = 0; idx < pastRepresentation.length; idx++) {
-            representations[nextOnList++] = pastRepresentation[idx];
-        }
-
-        return representations;
+        return representationBytes;
     }
 
     /*********************************************** /\ Votes Calculation ***********************************************/
@@ -280,14 +241,19 @@ abstract contract SenateVotes is Senate {
         uint256 amount,
         bool isSenator
     ) internal virtual override {
-        //TODO: check if from is banned or quarantined. DEAL WITH IT
-        if (from == address(0)) {
+        if (
+            from == address(0) &&
+            _validateSenator(from) &&
+            _validateMember(memberId[member])
+        ) {
             _totalSenateBooksCheckpoints.push(_add, amount);
-            //_senateMemberSuply[member].push(_add, amount);
         }
-        if (to == address(0)) {
+        if (
+            to == address(0) &&
+            _validateSenator(to) &&
+            _validateMember(memberId[member])
+        ) {
             _totalSenateBooksCheckpoints.push(_subtract, amount);
-            //_senateMemberSuply[member].push(_subtract, amount);
         }
         _moveDelegateVotes(member, from, to, amount, isSenator);
     }
@@ -305,16 +271,15 @@ abstract contract SenateVotes is Senate {
         if (from != to && amount > 0) {
             uint32 _memberId = memberId[member];
 
-            if (from != address(0)) {
+            if (from != address(0) && _validateSenator(from)) {
                 (uint256 oldValue, uint256 newValue) = _senateBooksCheckpoints[
                     from
                 ].push(_subtract, amount);
 
                 if (!isSenator) {
-                    _senatorRepresentations[from] = _remove(
-                        _senatorRepresentations[from],
-                        _memberId
-                    );
+                    _senatorRepresentationsBytes[
+                        from
+                    ] = _senatorRepresentationsBytes[from].remove(_memberId);
                 }
 
                 emit SenateBooksDelegateVotesChanged(
@@ -324,19 +289,12 @@ abstract contract SenateVotes is Senate {
                     newValue
                 );
             }
-            if (to != address(0)) {
+            if (to != address(0) && _validateSenator(to)) {
                 (uint256 oldValue, uint256 newValue) = _senateBooksCheckpoints[
                     to
                 ].push(_add, amount);
 
-                _senatorRepresentations[to] = _insert(
-                    _senatorRepresentations[to],
-                    _memberId
-                );
-
-                _senatorRepresentationsBytes[to].insertStorage(
-                    abi.encodePacked(_memberId)
-                );
+                _senatorRepresentationsBytes[to].insertStorage(_memberId);
 
                 emit SenateBooksDelegateVotesChanged(
                     member,
@@ -350,21 +308,122 @@ abstract contract SenateVotes is Senate {
 
     //book functions
     /**
-     * @dev Burn suply of given member that was banished
+     * @dev Burn suply of given member that was banished or quarantined
      */
     function _burnMemberVotings(address member) internal virtual override {
-        require(banned.contains(member), "SenateVotes::Member not banned");
+        require(
+            !_validateMember(memberId[member]),
+            "SenateVotes::Member not banned nor quarantined"
+        );
 
         if (tokens.contains(member))
             _totalSenateBooksCheckpoints.push(
                 _subtract,
                 ISenatorVotes(member).getTotalSupply()
             );
-        else if (oldDogsTokens.contains(member))
-            _totalSenateBooksCheckpoints.push(
-                _subtract,
-                IVotes(member).getPastTotalSupply(block.number - 1)
+
+        //if (!_banned) memberInQuarantine.add(member);
+    }
+
+    /**
+     * @dev Burn suply of given senator that was banished or quarantined
+     */
+    function _burnSenatorVotings(address _senator) internal virtual override {
+        require(
+            _validateSenator(_senator),
+            "SenateVotes::Senator not banned nor quarantined"
+        );
+
+        //burn senator votes for the time being
+        uint256 senatorVotes = _senateBooksCheckpoints[_senator]
+            .getAtProbablyRecentBlock(block.number - 1);
+
+        if (senatorVotes > 0) {
+            //burn senator votes
+            _transferVotingUnits(
+                address(0),
+                _senator,
+                address(0),
+                senatorVotes,
+                false
             );
+        }
+
+        //add to storage so we know when we need to free senator from quarantine
+        //if (!_banned) senatorInQuarantine.add(_senator);
+    }
+
+    /**
+     * @dev Recover suply of given senator that is getting out of quarantine
+     */
+    function _restoreSenatorVotings(address _senator)
+        internal
+        virtual
+        override
+    {
+        //require(
+        //    !senatorBanned.contains(_senator),
+        //    "SenateVotes::Senator banned"
+        //);
+        require(
+            senatorStatus(_senator) != senateSenatorStatus.BANNED_SENATOR,
+            "SenateVotes::Senator banned"
+        );
+
+        //require(
+        //    senatorInQuarantine.contains(_senator),
+        //    "SenateVotes::Senator not in quarantine"
+        //);
+        require(
+            senatorStatus(_senator) == senateSenatorStatus.QUARANTINE_SENATOR,
+            "SenateVotes::Senator not in quarantine"
+        );
+
+        //revert(
+        //    Strings.toHexString(uint160(senatorInQuarantine.getAddress(0)), 20)
+        //);
+
+        //get senator out of quarantine
+        //senatorInQuarantine.remove(_senator);
+
+        for (uint256 idx = 0; idx < tokens.length(); idx++) {
+            uint256 senatorVotes = ISenatorVotes(tokens.at(idx)).getPastVotes(
+                _senator,
+                block.number - 1
+            );
+
+            if (senatorVotes > 0)
+                _transferVotingUnits(
+                    tokens.at(idx),
+                    address(0),
+                    _senator,
+                    senatorVotes,
+                    true
+                );
+        }
+    }
+
+    /**
+     * @dev Recover suply of given member that is getting out of quarantine
+     */
+    function _restoreMemberVotings(address _token) internal virtual override {
+        require(
+            senateMemberStatus(_token) != membershipStatus.BANNED_MEMBER,
+            "SenateVotes::Senator banned"
+        );
+
+        require(
+            senateMemberStatus(_token) == membershipStatus.QUARANTINE_MEMBER,
+            "SenateVotes::Member not in quarantine"
+        );
+
+        //get senator out of quarantine
+        //memberInQuarantine.remove(_token);
+
+        uint256 memberVotes = ISenatorVotes(_token).getTotalSupply();
+
+        if (memberVotes > 0)
+            _totalSenateBooksCheckpoints.push(_add, memberVotes);
     }
 
     /*********************************************** /\ Senate Book Maintenance *****************************************/
@@ -375,83 +434,6 @@ abstract contract SenateVotes is Senate {
 
     function _subtract(uint256 a, uint256 b) private pure returns (uint256) {
         return a - b;
-    }
-
-    function _insert(uint32[] memory a, uint32 b)
-        private
-        pure
-        returns (uint32[] memory)
-    {
-        if (!_contains(a, b)) {
-            uint32[] memory newArray = new uint32[](a.length + 1);
-            uint32 idx;
-            for (idx = 0; idx < a.length; idx++) {
-                newArray[idx] = a[idx];
-            }
-            newArray[idx] = b;
-
-            return newArray;
-        }
-
-        return a;
-    }
-
-    function _remove(uint32[] memory a, uint32 b)
-        private
-        pure
-        returns (uint32[] memory)
-    {
-        if (_contains(a, b)) {
-            uint32[] memory newArray = new uint32[](
-                a.length - _countOccurrencies(a, b)
-            );
-            uint32 idxCounter;
-
-            for (uint256 idx = 0; idx < a.length; idx++) {
-                if (a[idx] == b) continue;
-
-                newArray[idxCounter++] = a[idx];
-            }
-
-            return newArray;
-        }
-
-        return a;
-    }
-
-    function _contains(uint32[] memory a, uint32 b)
-        private
-        pure
-        returns (bool)
-    {
-        for (uint256 idx = 0; idx < a.length; idx++) {
-            if (b == a[idx]) return true;
-        }
-        return false;
-    }
-
-    function _countOccurrencies(uint32[] memory a, uint32 b)
-        private
-        pure
-        returns (uint256 count)
-    {
-        for (uint256 idx = 0; idx < a.length; idx++) {
-            if (b == a[idx]) count++;
-        }
-    }
-
-    function toMemory(uint32[] memory a)
-        private
-        pure
-        returns (uint32[] memory)
-    {
-        uint32[] memory newArray = new uint32[](a.length);
-
-        for (uint256 idx = 0; idx < a.length; idx++) {
-            newArray[idx] = a[idx];
-        }
-
-        return newArray;
     }
 
     /**

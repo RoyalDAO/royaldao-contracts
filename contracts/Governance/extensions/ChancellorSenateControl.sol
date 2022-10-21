@@ -107,7 +107,7 @@ abstract contract ChancellorSenateControl is IChancellorSenate, Chancellor {
             uint256 currProposalThreshold,
             uint256 currVotingDelay,
             uint256 currVotingPeriod,
-            uint32[] memory senatorRepresentations,
+            bytes memory senatorRepresentations,
             uint256 votingPower,
             bool validSenator,
             bool validMembers
@@ -130,7 +130,7 @@ abstract contract ChancellorSenateControl is IChancellorSenate, Chancellor {
     /**
      * Validate a list of Members
      */
-    function _validateMembers(uint32[] memory members)
+    function _validateMembers(bytes memory members)
         internal
         view
         virtual

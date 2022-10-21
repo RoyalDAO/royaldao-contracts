@@ -21,6 +21,9 @@ abstract contract ISenate is IERC165 {
     event MemberQuarantined(address member);
     event SenatorQuarantined(address senator);
 
+    event MemberUnquarantined(address member);
+    event SenatorUnquarantined(address senator);
+
     event MemberBanned(address member);
     event SenatorBanned(address senator);
 
@@ -29,6 +32,13 @@ abstract contract ISenate is IERC165 {
         ACTIVE_MEMBER,
         QUARANTINE_MEMBER,
         BANNED_MEMBER
+    }
+
+    enum senateSenatorStatus {
+        NOT_SENATOR,
+        ACTIVE_SENATOR,
+        QUARANTINE_SENATOR,
+        BANNED_SENATOR
     }
 
     /**
@@ -53,6 +63,15 @@ abstract contract ISenate is IERC165 {
         returns (membershipStatus);
 
     /**
+     * @dev get senator status
+     */
+    function senatorStatus(address _senator)
+        public
+        view
+        virtual
+        returns (senateSenatorStatus);
+
+    /**
      * @dev Update Senate Voting Books.
      */
     function transferVotingUnits(
@@ -65,7 +84,7 @@ abstract contract ISenate is IERC165 {
     /**
      * @dev Check if all members from list are valid.
      */
-    function validateMembers(uint32[] calldata members)
+    function validateMembers(bytes calldata members)
         external
         view
         virtual
@@ -112,5 +131,5 @@ abstract contract ISenate is IERC165 {
         external
         view
         virtual
-        returns (uint32[] memory);
+        returns (bytes memory);
 }

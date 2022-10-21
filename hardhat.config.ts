@@ -111,17 +111,17 @@ const config: HardhatUserConfig = {
     user: {
       default: 1,
     },
-    safeCaller: {
+    deputy: {
       default: 2,
     },
   },
   solidity: {
     version: "0.8.16",
     settings: {
-      viaIR: true,
+      //viaIR: true,
       optimizer: {
         enabled: true,
-        runs: 600,
+        runs: 5000,
       },
     },
   },

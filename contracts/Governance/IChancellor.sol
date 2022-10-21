@@ -79,6 +79,14 @@ abstract contract IChancellor is IERC165 {
         bytes params
     );
 
+    struct SenateSettings {
+        uint256 currProposalThreshold;
+        uint64 currVotingDelay;
+        uint64 currVotingPeriod;
+        bytes representation;
+        uint256 memberVotingPower;
+    }
+
     /**
      * @notice module:core
      * @dev Name of the Chancellor instance (used in building the ERC712 domain separator).
@@ -193,7 +201,7 @@ abstract contract IChancellor is IERC165 {
             uint256 proposalThreshold,
             uint256 votingDelay,
             uint256 votingPeriod,
-            uint32[] memory senatorRepresentations,
+            bytes memory senatorRepresentations,
             uint256 votingPower,
             bool validSenator,
             bool validMembers
