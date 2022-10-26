@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.6.0) (governance/extensions/GovernorVotes.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/Senate.sol)
+// Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
 
@@ -8,7 +9,6 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Timers.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -19,35 +19,60 @@ import "../Governance/utils/ISenatorVotes.sol";
 import "../Utils/ArrayBytes.sol";
 
 /**
- * @dev Extension of {Governor} for voting weight extraction from an {ERC20Votes} token, or since v4.5 an {ERC721Votes} token.
+ * @dev Contract made to handle multiple tokens as members of the same DAO.
  *
- * _Available since v4.3._
+ * _Available since v1._
  *
- * @custom:storage-size 51
  */
+//TODO: Senate member withdraw from senate
 abstract contract Senate is Context, ERC165, EIP712, ISenate {
-    //TODO: Complex votes for single vote by token
     using EnumerableSet for EnumerableSet.AddressSet;
     using Counters for Counters.Counter;
     using BytesArrayLib32 for bytes;
 
+    /**
+     * @dev storage for members that implements ERC721SenatorVotes
+     * @dev ERC721SenatorVotes implementers have function that don't exists in ERC721Votes implementers
+     */
     EnumerableSet.AddressSet internal tokens;
+
+    /**
+     * @dev storage for members that implements ERC721Votes
+     */
     EnumerableSet.AddressSet internal oldDogsTokens;
 
+    /**
+     * @dev address of DAO Executor (If uses TimeLock, should be TimeLock address. Chancellor address otherwise).
+     */
     address public Chancellor;
 
+    /**
+     * @dev generator of sequential member ids.
+     */
     Counters.Counter private memberCounter;
 
+    /**
+     * @dev mappings to manage translation Member Address <--> Member Id.
+     */
     mapping(address => uint32) internal memberId;
     mapping(uint32 => address) internal idMember;
 
+    /**
+     * @dev EIP712 _name storage
+     */
     string private _name;
 
+    /**
+     * @dev Modifier to ensure that caller is Chancellor
+     */
     modifier onlyChancellor() {
         require(msg.sender == Chancellor, "Senate::Only Chancellor allowed!");
         _;
     }
 
+    /**
+     * @dev Modifier to ensure that Senate is Open
+     */
     modifier ifSenateOpen() {
         require(
             tokens.length() > 0 || oldDogsTokens.length() > 0,
@@ -56,6 +81,9 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         _;
     }
 
+    /**
+     * @dev Modifier to ensure that Senate is Closed
+     */
     modifier ifSenateClosed() {
         require(
             tokens.length() == 0 && oldDogsTokens.length() == 0,
@@ -64,6 +92,9 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         _;
     }
 
+    /**
+     * @dev Modifier to ensure that Member is accepted part of the Senate
+     */
     modifier onlyValidMember() {
         require(
             senateMemberStatus(msg.sender) == membershipStatus.ACTIVE_MEMBER,
@@ -72,32 +103,27 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         _;
     }
 
+    /**
+     * @dev Senate constructor must receive a valida deployed Chancellor contract address
+     */
     constructor(string memory name_, address _Chancellor)
         EIP712(name_, version())
     {
-        //quarantinePeriod = _quarantinePeriod;
+        require(
+            _Chancellor != address(0),
+            "Senate::Invalid Chancellor address(0)"
+        );
 
         Chancellor = _Chancellor;
         _name = name_;
     }
 
     /**
-     * @dev See {ISenate-name}.
+     * @dev See {ISenate-openSenate}.
      */
-    function name() public view virtual override returns (string memory) {
-        return _name;
-    }
-
-    /**
-     * @dev See {ISenate-version}.
-     */
-    function version() public view virtual override returns (string memory) {
-        return "1";
-    }
-
     function openSenate(address[] memory _tokens)
         external
-        virtual
+        override
         ifSenateClosed
     {
         for (uint256 idx = 0; idx < _tokens.length; idx++) {
@@ -138,31 +164,219 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
     }
 
     /**
-     * @dev Default additional encoded parameters used by castVote methods that don't include them
-     *
-     * Note: Should be overridden by specific implementations to use an appropriate value, the
-     * meaning of the additional params, in the context of that implementation
+     * @dev Get the voting weight of `account` at a specific `blockNumber`, for a vote as described by `params` from senate books.
      */
-    function _defaultParams() internal view virtual returns (bytes memory) {
-        return "";
+    function getVotes(
+        address account,
+        uint256 blockNumber,
+        bytes memory params
+    ) external view virtual returns (uint256) {
+        return _getVotes(account, blockNumber, params);
+    }
+
+    /**
+     * @dev Get the total voting supply from senate books at latest `blockNumber`.
+     */
+    function getTotalSuply() external view virtual returns (uint256) {
+        return _getTotalSuply();
+    }
+
+    /**
+     * @dev See {ISenate-transferVotingUnits}.
+     */
+    function transferVotingUnits(
+        address from,
+        address to,
+        uint256 amount,
+        bool isSenator,
+        bool updateTotalSupply
+    ) external virtual override onlyValidMember {
+        _transferVotingUnits(
+            msg.sender,
+            from,
+            to,
+            amount,
+            isSenator,
+            updateTotalSupply
+        );
+    }
+
+    /**
+     * @dev See {ISenate-getRepresentation}.
+     */
+    function getRepresentation(address account)
+        external
+        view
+        virtual
+        override
+        returns (bytes memory)
+    {
+        return _getRepresentation(account);
+    }
+
+    /**
+     * @dev Get the current senator representation readable list
+     */
+    function getRepresentationList(address account)
+        external
+        view
+        virtual
+        returns (uint32[] memory)
+    {
+        return _getRepresentation(account).getArray();
+    }
+
+    /**
+     * @dev Accept new Member to Senate from approved proposal
+     */
+    function acceptToSenate(address _token) external virtual onlyChancellor {
+        _acceptToSenate(_token);
     }
 
     function getNewGang() external view returns (address[] memory) {
         return tokens.values();
     }
 
+    /**
+     * @dev Get the current IVotes Implementers Member List
+     */
     function getOldDogs() external view returns (address[] memory) {
         return oldDogsTokens.values();
     }
 
+    /**
+     * @dev Get the Member Id for given Member address
+     */
     function getMemberId(address member) external view returns (uint32) {
         return memberId[member];
     }
 
+    /**
+     * @dev Get the Member address with given Id
+     */
     function getMemberOfId(uint32 _memberId) external view returns (address) {
         return idMember[_memberId];
     }
 
+    /**
+     * @dev {ISenate-validateMembers}.
+     */
+    function validateMembers(bytes memory members)
+        external
+        view
+        virtual
+        override
+        returns (bool)
+    {
+        return _validateMembers(members);
+    }
+
+    /**
+     * @dev {ISenate-validateSenator}.
+     */
+    function validateSenator(address senator)
+        external
+        view
+        virtual
+        override
+        returns (bool)
+    {
+        return _validateSenator(senator);
+    }
+
+    /**
+     * @dev Return current Senate Settings. Must implement it if not using SenateSettings Extension.
+     */
+    function getSettings(address account)
+        external
+        view
+        virtual
+        returns (
+            uint256 proposalThreshold,
+            uint256 votingDelay,
+            uint256 votingPeriod,
+            bytes memory senatorRepresentations,
+            uint256 votingPower,
+            bool validSenator,
+            bool validMembers
+        );
+
+    /**
+     * @dev See {ISenate-name}.
+     */
+    function name() public view virtual override returns (string memory) {
+        return _name;
+    }
+
+    /**
+     * @dev See {ISenate-version}.
+     */
+    function version() public view virtual override returns (string memory) {
+        return "1";
+    }
+
+    /**
+     * @dev Part of the Chancellor Bravo's interface: _"The number of votes required in order for a voter to become a proposer"_.
+     */
+    function proposalThreshold() public view virtual returns (uint256) {
+        return 0;
+    }
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(IERC165, ERC165)
+        returns (bool)
+    {
+        return
+            interfaceId == type(ISenate).interfaceId ||
+            super.supportsInterface(interfaceId);
+    }
+
+    /**
+     * @dev {ISenate-senateMemberStatus}.
+     */
+    function senateMemberStatus(address _tokenAddress)
+        public
+        view
+        virtual
+        override
+        returns (membershipStatus);
+
+    /**
+     * @dev {ISenate-senatorStatus}.
+     */
+    function senatorStatus(address _senator)
+        public
+        view
+        virtual
+        override
+        returns (senateSenatorStatus);
+
+    /**
+     * @dev Returns the total supply of votes available at the end of a past block (`blockNumber`).
+     *
+     * NOTE: This value is the sum of all available votes, which is not necessarily the sum of all delegated votes.
+     * Votes that have not been delegated are still part of total supply, even though they would not participate in a
+     * vote.
+     *
+     * Requirements:
+     *
+     * - `blockNumber` must have been already mined
+     */
+    function getPastTotalSupply(uint256 blockNumber)
+        public
+        view
+        virtual
+        returns (uint256);
+
+    /**
+     * @dev internal function to process new member entrance
+     */
     function _acceptToSenate(address _token) internal {
         //require(!banned.contains(_token), "Senate::Banned are Exiled");
         require(
@@ -194,151 +408,6 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
             }
         } else revert("Senate::Invalid implementation!");
     }
-
-    function writeMemberToSenateBooks(address member) private {
-        //get owners list
-        ISenatorVotes.senateSnapshot[] memory _totalSuply = ISenatorVotes(
-            member
-        ).getSenateSnapshot();
-
-        for (uint256 idx = 0; idx < _totalSuply.length; idx++) {
-            _transferVotingUnits(
-                member,
-                address(0),
-                _totalSuply[idx].senator,
-                _totalSuply[idx].votes,
-                true
-            );
-        }
-    }
-
-    /**
-     * @dev Check if all members from list are valid.
-     */
-    function validateMembers(bytes memory members)
-        external
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        return _validateMembers(members);
-    }
-
-    /**
-     * @dev Check if senator is active.
-     */
-    function validateSenator(address senator)
-        external
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        return _validateSenator(senator);
-    }
-
-    /**
-     * @dev Part of the Chancellor Bravo's interface: _"The number of votes required in order for a voter to become a proposer"_.
-     */
-    function proposalThreshold() public view virtual returns (uint256) {
-        return 0;
-    }
-
-    function acceptToSenate(address _token) external virtual onlyChancellor {
-        _acceptToSenate(_token);
-    }
-
-    /**
-     * @dev Get the voting weight of `account` at a specific `blockNumber`, for a vote as described by `params`.
-     */
-    function getVotes(
-        address account,
-        uint256 blockNumber,
-        bytes memory params
-    ) external view virtual returns (uint256) {
-        require(
-            _validateMembers(_getRepresentation(account)),
-            "Senate::Senator Owns token from Inapt Member"
-        );
-
-        return _getVotes(account, blockNumber, params);
-    }
-
-    /**
-     * @dev Get the total voting supply at latest `blockNumber`.
-     */
-    function getTotalSuply() external view virtual returns (uint256) {
-        return _getTotalSuply();
-    }
-
-    /**
-     * @dev Update Senate Voting Books.
-     */
-    function transferVotingUnits(
-        address from,
-        address to,
-        uint256 amount,
-        bool isSenator
-    ) external virtual override onlyValidMember {
-        _transferVotingUnits(msg.sender, from, to, amount, isSenator);
-    }
-
-    /**
-     * @dev Get the current senator representation in bytes.
-     */
-    function getRepresentation(address account)
-        external
-        view
-        virtual
-        override
-        returns (bytes memory)
-    {
-        return _getRepresentation(account);
-    }
-
-    /**
-     * @dev Get the current senator representation in bytes.
-     */
-    function getRepresentationList(address account)
-        external
-        view
-        virtual
-        returns (uint32[] memory)
-    {
-        return _getRepresentation(account).getArray();
-    }
-
-    /**
-     * @dev See {IERC165-supportsInterface}.
-     */
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(IERC165, ERC165)
-        returns (bool)
-    {
-        return
-            interfaceId == type(ISenate).interfaceId ||
-            super.supportsInterface(interfaceId);
-    }
-
-    /*** \/ Functions that contract must implement ******************************************************************/
-
-    function senateMemberStatus(address _tokenAddress)
-        public
-        view
-        virtual
-        override
-        returns (membershipStatus);
-
-    function senatorStatus(address _senator)
-        public
-        view
-        virtual
-        override
-        returns (senateSenatorStatus);
 
     /**
      * @dev Check if all members from list are valid.
@@ -385,26 +454,10 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
      */
     function _getTotalSuply() internal view virtual returns (uint256);
 
-    function getPastTotalSupply(uint256 blockNumber)
-        public
-        view
-        virtual
-        returns (uint256);
-
-    function getSettings(address account)
-        external
-        view
-        virtual
-        returns (
-            uint256 proposalThreshold,
-            uint256 votingDelay,
-            uint256 votingPeriod,
-            bytes memory senatorRepresentations,
-            uint256 votingPower,
-            bool validSenator,
-            bool validMembers
-        );
-
+    /**
+     * @dev Get the Senator Representations
+     * @dev Representation is a list of the Members(tokens) from whom the Senator owns 1 or more tokens
+     */
     function _getRepresentation(address account)
         internal
         view
@@ -422,10 +475,10 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
         address from,
         address to,
         uint256 amount,
-        bool isSenator
+        bool isSenator,
+        bool updateTotalSupply
     ) internal virtual;
 
-    //book functions
     /**
      * @dev Burn suply of given member that was banished or quarantined
      */
@@ -446,5 +499,26 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
      */
     function _restoreMemberVotings(address _token) internal virtual;
 
-    /*** /\ Functions that contract must implement ******************************************************************/
+    /**
+     *@dev writes the voting distribution of a Member that enters the senate after its opening
+     *
+     *NOTE: this function only works for SenatorVotes implementers
+     */
+    function writeMemberToSenateBooks(address member) private {
+        //get owners list
+        ISenatorVotes.senateSnapshot[] memory _totalSuply = ISenatorVotes(
+            member
+        ).getSenateSnapshot();
+
+        for (uint256 idx = 0; idx < _totalSuply.length; idx++) {
+            _transferVotingUnits(
+                member,
+                address(0),
+                _totalSuply[idx].senator,
+                _totalSuply[idx].votes,
+                true,
+                true
+            );
+        }
+    }
 }

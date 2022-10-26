@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../../../Governance/utils/SenatorVotes.sol";
+import "../../../Governance/utils/ISenatorVotes.sol";
 import "../../../Governance/ISenate.sol";
 
 /**
@@ -46,5 +47,17 @@ abstract contract ERC721SenatorVotes is ERC721, SenatorVotes {
         returns (uint256)
     {
         return balanceOf(account);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override
+        returns (bool)
+    {
+        return
+            interfaceId == type(ISenatorVotes).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 }

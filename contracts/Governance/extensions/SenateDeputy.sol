@@ -1,29 +1,42 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (governance/extensions/GovernorSettings.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/extensions/SenateDeputy.sol)
+// Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
 
 import "../Senate.sol";
 
 /**
- * @dev Extension of {Chancellor} for settings updatable through governance.
+ * @dev Extension of {Senate} to create the Deputy role.
+ * @dev Deputy have some powers to keep the Senate safe from malicious members and/or senators
  *
- * _Available since v4.4._
+ * _Available since v1._
  */
+//TODO: Create Deputy Impeachment Process
+//TODO: Create Deputy Payment
 abstract contract SenateDeputy is Senate {
+    /**
+     * @dev Emitted when a new Deputy is nominated
+     */
+    event NewDeputyInTown(address newDeputy, uint256 mandateEndsAtBlock);
+    /**
+     * @dev Emitted when a Deputy Resigns his role
+     */
+    event DeputyResignation(address deputy, uint256 resignedAt);
+
     address public deputyMarshal;
     uint256 public mandatePeriod;
 
     mapping(address => uint256) internal deputyMandate;
 
+    /**
+     * @dev Exposes onlyMarshal modifier to be used as the implemeter's need
+     */
     modifier onlyMarshal() {
         require(msg.sender == deputyMarshal, "Senate::Only deputy allowed!");
         _;
     }
 
-    /**
-     * @dev Initialize the governance parameters.
-     */
     constructor(address _deputyMarshal, uint256 _mandatePeriod) {
         //set deputy mandate
         mandatePeriod = _mandatePeriod;

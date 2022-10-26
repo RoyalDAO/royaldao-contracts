@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.7.0) (governance/IGovernor.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/Senate.sol)
+// Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
 
@@ -8,25 +9,13 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 /**
  * @dev Interface of the {Senate} core.
  *
- * _Available since v4.3._
- * IChancellorUpgradeable.sol modifies OpenZeppelin's IGovernorUpgradeable.sol:
- * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/master/contracts/governance/IGovernorUpgradeable.sol
- * IGovernorUpgradeable.sol source code copyright OpenZeppelin licensed under the MIT License.
- * Modified by QueenE DAO.
+ * _Available since v1.0._
+ * ISenate.sol is based on some functions from OpenZeppelin's IGovernor.sol and expands it for a more complex DAO access control:
+ * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/governance/IGovernor.sol
+ * IGovernor.sol source code copyright OpenZeppelin licensed under the MIT License.
+ * Modified by RoyalDAO.
  */
 abstract contract ISenate is IERC165 {
-    event NewDeputyInTown(address newDeputy, uint256 mandateEndsAtBlock);
-    event DeputyResignation(address deputy, uint256 resignedAt);
-
-    event MemberQuarantined(address member);
-    event SenatorQuarantined(address senator);
-
-    event MemberUnquarantined(address member);
-    event SenatorUnquarantined(address senator);
-
-    event MemberBanned(address member);
-    event SenatorBanned(address senator);
-
     enum membershipStatus {
         NOT_MEMBER,
         ACTIVE_MEMBER,
@@ -40,6 +29,50 @@ abstract contract ISenate is IERC165 {
         QUARANTINE_SENATOR,
         BANNED_SENATOR
     }
+
+    /**
+     * @notice module:core
+     * @dev Open Senate with initial Members. Initial Members don't need to pass through Senate approval process. They are the founders members.
+     */
+    function openSenate(address[] memory _tokens) external virtual;
+
+    /**
+     * @dev Update Senate Voting Books.
+     */
+    function transferVotingUnits(
+        address from,
+        address to,
+        uint256 amount,
+        bool isSenator,
+        bool updateTotalSupply
+    ) external virtual;
+
+    /**
+     * @dev Check if all members from list are valid.
+     */
+    function validateMembers(bytes calldata members)
+        external
+        view
+        virtual
+        returns (bool);
+
+    /**
+     * @dev Check if senator is active and able to participate in the Senate.
+     */
+    function validateSenator(address senator)
+        external
+        view
+        virtual
+        returns (bool);
+
+    /**
+     * @dev Get the current senator representation list in bytes.
+     */
+    function getRepresentation(address account)
+        external
+        view
+        virtual
+        returns (bytes memory);
 
     /**
      * @notice module:core
@@ -72,34 +105,6 @@ abstract contract ISenate is IERC165 {
         returns (senateSenatorStatus);
 
     /**
-     * @dev Update Senate Voting Books.
-     */
-    function transferVotingUnits(
-        address from,
-        address to,
-        uint256 amount,
-        bool isSenator
-    ) external virtual;
-
-    /**
-     * @dev Check if all members from list are valid.
-     */
-    function validateMembers(bytes calldata members)
-        external
-        view
-        virtual
-        returns (bool);
-
-    /**
-     * @dev Check if senator is active.
-     */
-    function validateSenator(address senator)
-        external
-        view
-        virtual
-        returns (bool);
-
-    /**
      * @notice module:user-config
      * @dev Delay, in number of block, between the proposal is created and the vote starts. This can be increassed to
      * leave time for users to buy voting power, or delegate it, before the voting of a proposal starts.
@@ -123,13 +128,4 @@ abstract contract ISenate is IERC165 {
      * quorum depending on values such as the totalSupply of a token at this block (see {ERC20Votes}).
      */
     function quorum(uint256 blockNumber) public view virtual returns (uint256);
-
-    /**
-     * @dev Get the current senator representation.
-     */
-    function getRepresentation(address account)
-        external
-        view
-        virtual
-        returns (bytes memory);
 }

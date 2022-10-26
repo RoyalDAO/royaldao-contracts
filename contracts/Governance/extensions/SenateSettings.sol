@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (governance/extensions/GovernorSettings.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/extensions/SenateSettings.sol)
+// Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
 
 import "../Senate.sol";
 
 /**
- * @dev Extension of {Chancellor} for settings updatable through governance.
+ * @dev Extension of {Senate} for settings updatable through governance.
  *
- * _Available since v4.4._
+ * _Available since v1.0.0
  */
 abstract contract SenateSettings is Senate {
     uint256 private _votingDelay;
@@ -36,32 +37,8 @@ abstract contract SenateSettings is Senate {
     }
 
     /**
-     * @dev See {ISenate-votingDelay}.
+     * @dev See {Senate-getSettings}.
      */
-    function votingDelay() public view virtual override returns (uint256) {
-        return _votingDelay;
-    }
-
-    /**
-     * @dev See {ISenate-votingPeriod}.
-     */
-    function votingPeriod() public view virtual override returns (uint256) {
-        return _votingPeriod;
-    }
-
-    /**
-     * @dev See {Chancellor-proposalThreshold}.
-     */
-    function proposalThreshold()
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        return _proposalThreshold;
-    }
-
     function getSettings(address account)
         external
         view
@@ -126,6 +103,33 @@ abstract contract SenateSettings is Senate {
         onlyChancellor
     {
         _setProposalThreshold(newProposalThreshold);
+    }
+
+    /**
+     * @dev See {ISenate-votingDelay}.
+     */
+    function votingDelay() public view virtual override returns (uint256) {
+        return _votingDelay;
+    }
+
+    /**
+     * @dev See {ISenate-votingPeriod}.
+     */
+    function votingPeriod() public view virtual override returns (uint256) {
+        return _votingPeriod;
+    }
+
+    /**
+     * @dev See {Senate-proposalThreshold}.
+     */
+    function proposalThreshold()
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        return _proposalThreshold;
     }
 
     /**

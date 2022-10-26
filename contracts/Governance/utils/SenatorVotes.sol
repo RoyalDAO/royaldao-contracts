@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.6.0) (governance/utils/Votes.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/utils/SenatorVotes.sol)
+// Uses OpenZeppelin Contracts and Libraries
+
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -12,24 +14,20 @@ import "../../Governance/ISenate.sol";
 import "../../Utils/Checkpoints.sol";
 
 /**
- * @dev This is a base abstract contract that tracks voting units, which are a measure of voting power that can be
- * transferred, and provides a system of vote delegation, where an account can delegate its voting units to a sort of
- * "representative" that will pool delegated voting units from different accounts and can then use it to vote in
- * decisions. In fact, voting units _must_ be delegated in order to count as actual votes, and an account has to
- * delegate those votes to itself if it wishes to participate in decisions and does not have a trusted representative.
+ * @dev This is a base abstract contract that tracks voting units from the diferent members of Senate (A.K.A Senate Books).
+ * Senate Members must implements ERC721SenatorVotes/SenatorVotes or ERC721Votes/Votes extension that control its voting weigth.
  *
- * This contract is often combined with a token contract such that voting units correspond to token units. For an
- * example, see {ERC721Votes}.
+ * see {ERC721SenatorVotes or ERC721Votes}
  *
- * The full history of delegate votes is tracked on-chain so that governance protocols can consider votes as distributed
- * at a particular block number to protect against flash loans and double voting. The opt-in delegate system makes the
- * cost of this history tracking optional.
+ * ERC721SenatorVotes Implementers keeps the Senate Books updated whenever there is a shift in voting power.
+ * For ERC721Votes Implementers, whenever needed, the Senate makes an external call to check the holder (A.K.A Senator) voting power
+ *
  *
  * When using this module the derived contract must implement {_getVotingUnits} (for example, make it return
  * {ERC721-balanceOf}), and can use {_transferVotingUnits} to track a change in the distribution of those units (in the
  * previous example, it would be included in {ERC721-_beforeTokenTransfer}).
  *
- * _Available since v4.5._
+ * _Available since v1._
  */
 abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
     //TODO: test if runs with Governor
@@ -174,12 +172,29 @@ abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
         _delegation[account] = delegatee;
 
         emit DelegateChanged(account, oldDelegate, delegatee);
-        _moveDelegateVotes(oldDelegate, delegatee, _getVotingUnits(account));
+
+        bool fromStillSenator = _moveDelegateVotes(
+            oldDelegate,
+            delegatee,
+            _getVotingUnits(account)
+        );
+
+        //update senate books
+        if (address(senate) != address(0))
+            senate.transferVotingUnits(
+                oldDelegate,
+                delegatee,
+                _getVotingUnits(account),
+                fromStillSenator,
+                false
+            );
     }
 
     /**
      * @dev Transfers, mints, or burns voting units. To register a mint, `from` should be zero. To register a burn, `to`
      * should be zero. Total supply of voting units will be adjusted with mints and burns.
+     *
+     * NOTE If tokens participates in a Senate, an external call to the Senate contract is made to update the Senate Books updated.
      */
     function _transferVotingUnits(
         address from,
@@ -192,19 +207,35 @@ abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
         if (to == address(0)) {
             _totalCheckpoints.push(_subtract, amount);
         }
-        _moveDelegateVotes(delegates(from), delegates(to), amount);
+
+        bool fromStillSenator = _moveDelegateVotes(
+            delegates(from),
+            delegates(to),
+            amount
+        );
+
+        //update senate books
+        if (address(senate) != address(0))
+            senate.transferVotingUnits(
+                from,
+                to,
+                amount,
+                fromStillSenator,
+                true
+            );
     }
 
     /**
      * @dev Moves delegated votes from one delegate to another.
+     *
+     * NOTE if `from` keeps no voting power and is in Senator list, removes it
+     *      `to` is inserted as senator if its not already
      */
     function _moveDelegateVotes(
         address from,
         address to,
         uint256 amount
-    ) private {
-        bool fromStillSenator;
-
+    ) private returns (bool fromStillSenator) {
         if (from != to && amount > 0) {
             if (from != address(0)) {
                 (uint256 oldValue, uint256 newValue) = _delegateCheckpoints[
@@ -221,11 +252,11 @@ abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
                 (uint256 oldValue, uint256 newValue) = _delegateCheckpoints[to]
                     .push(_add, amount);
 
+                if (!senators.contains(from) && newValue > 0)
+                    senators.add(from);
+
                 emit DelegateVotesChanged(to, oldValue, newValue);
             }
-            //update senate books
-            if (address(senate) != address(0))
-                senate.transferVotingUnits(from, to, amount, fromStillSenator);
         }
     }
 
@@ -317,6 +348,9 @@ abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
 
     /**
      * @dev Set senate address.
+     *
+     * NOTE If member wants to change to another senate or even to no senate at all, first it must be deactivated from current senate
+     *
      */
     function _setSenate(ISenate _senate) internal virtual {
         if (address(senate) != address(0))
