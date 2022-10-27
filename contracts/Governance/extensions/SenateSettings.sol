@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (governance/extensions/GovernorSettings.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/extensions/SenateSettings.sol)
+// Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
 
 import "../Senate.sol";
 
 /**
- * @dev Extension of {Chancelor} for settings updatable through governance.
+ * @dev Extension of {Senate} for settings updatable through governance.
  *
- * _Available since v4.4._
+ * _Available since v1.0.0
  */
 abstract contract SenateSettings is Senate {
     uint256 private _votingDelay;
@@ -36,33 +37,9 @@ abstract contract SenateSettings is Senate {
     }
 
     /**
-     * @dev See {IChancelor-votingDelay}.
+     * @dev See {Senate-getSettings}.
      */
-    function votingDelay() public view virtual override returns (uint256) {
-        return _votingDelay;
-    }
-
-    /**
-     * @dev See {IChancelor-votingPeriod}.
-     */
-    function votingPeriod() public view virtual override returns (uint256) {
-        return _votingPeriod;
-    }
-
-    /**
-     * @dev See {Chancelor-proposalThreshold}.
-     */
-    function proposalThreshold()
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        return _proposalThreshold;
-    }
-
-    function getSettings()
+    function getSettings(address account)
         external
         view
         virtual
@@ -70,10 +47,23 @@ abstract contract SenateSettings is Senate {
         returns (
             uint256 currProposalThreshold,
             uint256 currVotingDelay,
-            uint256 currVotingPeriod
+            uint256 currVotingPeriod,
+            bytes memory senatorRepresentations,
+            uint256 votingPower,
+            bool validSenator,
+            bool validMembers
         )
     {
-        return (_proposalThreshold, _votingDelay, _votingPeriod);
+        bytes memory representations = _getRepresentation(account);
+        return (
+            _proposalThreshold,
+            _votingDelay,
+            _votingPeriod,
+            representations,
+            _getVotes(account, block.number - 1, ""),
+            _validateSenator(account),
+            _validateMembers(representations)
+        );
     }
 
     /**
@@ -84,7 +74,7 @@ abstract contract SenateSettings is Senate {
     function setVotingDelay(uint256 newVotingDelay)
         public
         virtual
-        onlyChancelor
+        onlyChancellor
     {
         _setVotingDelay(newVotingDelay);
     }
@@ -97,22 +87,49 @@ abstract contract SenateSettings is Senate {
     function setVotingPeriod(uint256 newVotingPeriod)
         public
         virtual
-        onlyChancelor
+        onlyChancellor
     {
         _setVotingPeriod(newVotingPeriod);
     }
 
     /**
-     * @dev Update the proposal threshold. This operation can only be performed through a Chancelor proposal.
+     * @dev Update the proposal threshold. This operation can only be performed through a Chancellor proposal.
      *
      * Emits a {ProposalThresholdSet} event.
      */
     function setProposalThreshold(uint256 newProposalThreshold)
         public
         virtual
-        onlyChancelor
+        onlyChancellor
     {
         _setProposalThreshold(newProposalThreshold);
+    }
+
+    /**
+     * @dev See {ISenate-votingDelay}.
+     */
+    function votingDelay() public view virtual override returns (uint256) {
+        return _votingDelay;
+    }
+
+    /**
+     * @dev See {ISenate-votingPeriod}.
+     */
+    function votingPeriod() public view virtual override returns (uint256) {
+        return _votingPeriod;
+    }
+
+    /**
+     * @dev See {Senate-proposalThreshold}.
+     */
+    function proposalThreshold()
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        return _proposalThreshold;
     }
 
     /**
@@ -134,7 +151,7 @@ abstract contract SenateSettings is Senate {
         // voting period must be at least one block long
         require(
             newVotingPeriod > 0,
-            "ChancelorSettings: voting period too low"
+            "ChancellorSettings: voting period too low"
         );
         emit VotingPeriodSet(_votingPeriod, newVotingPeriod);
         _votingPeriod = newVotingPeriod;

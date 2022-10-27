@@ -1,27 +1,33 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.6.0) (governance/compatibility/GovernorCompatibilityBravo.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/extensions/ChancellorCompatibilityBravo.sol)
+// Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "../extensions/IChancelorTimelock.sol";
-import "../Chancelor.sol";
-import "./IChancelorCompatibilityBravo.sol";
+import "../extensions/IChancellorTimelock.sol";
+import "../Chancellor.sol";
+import "./IChancellorCompatibilityBravo.sol";
 
 /**
- * @dev Compatibility layer that implements GovernorBravo compatibility on to of {Chancelor}.
+ * @dev Compatibility layer that implements GovernorBravo compatibility on to of {Chancellor}.
  *
- * This compatibility layer includes a voting system and requires a {IChancelorTimelock} compatible module to be added
+ * This compatibility layer includes a voting system and requires a {IChancellorTimelock} compatible module to be added
  * through inheritance. It does not include token bindings, not does it include any variable upgrade patterns.
+ *
+ * ChancellorCompatibilityBravo.sol modifies OpenZeppelin's GovernorCompatibilityBravo.sol:
+ * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/governance/compatibility/GovernorCompatibilityBravo.sol
+ * GovernorCompatibilityBravo.sol source code copyright OpenZeppelin licensed under the MIT License.
+ * Modified by RoyalDAO.
  *
  * NOTE: When using this module, you may need to enable the Solidity optimizer to avoid hitting the contract size limit.
  *
- * _Available since v4.3._
+ * _Available since v1.0._
  */
-abstract contract ChancelorCompatibilityBravo is
-    IChancelorTimelock,
-    IChancelorCompatibilityBravo,
-    Chancelor
+abstract contract ChancellorCompatibilityBravo is
+    IChancellorTimelock,
+    IChancellorCompatibilityBravo,
+    Chancellor
 {
     enum VoteType {
         Against,
@@ -57,14 +63,14 @@ abstract contract ChancelorCompatibilityBravo is
 
     // ============================================== Proposal lifecycle ==============================================
     /**
-     * @dev See {IGovernor-propose}.
+     * @dev See {IChancellor-propose}.
      */
     function propose(
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description
-    ) public virtual override(IChancelor, Chancelor) returns (uint256) {
+    ) public virtual override(IChancellor, Chancellor) returns (uint256) {
         _storeProposal(
             _msgSender(),
             targets,
@@ -77,7 +83,7 @@ abstract contract ChancelorCompatibilityBravo is
     }
 
     /**
-     * @dev See {IGovernorCompatibilityBravo-propose}.
+     * @dev See {IChancellorCompatibilityBravo-propose}.
      */
     function propose(
         address[] memory targets,
@@ -104,7 +110,7 @@ abstract contract ChancelorCompatibilityBravo is
     }
 
     /**
-     * @dev See {IGovernorCompatibilityBravo-queue}.
+     * @dev See {IChancellorCompatibilityBravo-queue}.
      */
     function queue(uint256 proposalId) public virtual override {
         ProposalDetails storage details = _proposalDetails[proposalId];
@@ -117,7 +123,7 @@ abstract contract ChancelorCompatibilityBravo is
     }
 
     /**
-     * @dev See {IGovernorCompatibilityBravo-execute}.
+     * @dev See {IChancellorCompatibilityBravo-execute}.
      */
     function execute(uint256 proposalId) public payable virtual override {
         ProposalDetails storage details = _proposalDetails[proposalId];
@@ -200,7 +206,7 @@ abstract contract ChancelorCompatibilityBravo is
 
     // ==================================================== Views =====================================================
     /**
-     * @dev See {IGovernorCompatibilityBravo-proposals}.
+     * @dev See {IChancellorCompatibilityBravo-proposals}.
      */
     function proposals(uint256 proposalId)
         public
@@ -237,7 +243,7 @@ abstract contract ChancelorCompatibilityBravo is
     }
 
     /**
-     * @dev See {IGovernorCompatibilityBravo-getActions}.
+     * @dev See {IChancellorCompatibilityBravo-getActions}.
      */
     function getActions(uint256 proposalId)
         public
@@ -261,7 +267,7 @@ abstract contract ChancelorCompatibilityBravo is
     }
 
     /**
-     * @dev See {IGovernorCompatibilityBravo-getReceipt}.
+     * @dev See {IChancellorCompatibilityBravo-getReceipt}.
      */
     function getReceipt(uint256 proposalId, address voter)
         public
@@ -274,7 +280,7 @@ abstract contract ChancelorCompatibilityBravo is
     }
 
     /**
-     * @dev See {IGovernorCompatibilityBravo-quorumVotes}.
+     * @dev See {IChancellorCompatibilityBravo-quorumVotes}.
      */
     function quorumVotes() public view virtual override returns (uint256) {
         return quorum(block.number - 1);
@@ -282,7 +288,7 @@ abstract contract ChancelorCompatibilityBravo is
 
     // ==================================================== Voting ====================================================
     /**
-     * @dev See {IGovernor-hasVoted}.
+     * @dev See {IChancellor-hasVoted}.
      */
     function hasVoted(uint256 proposalId, address account)
         public
@@ -295,7 +301,7 @@ abstract contract ChancelorCompatibilityBravo is
     }
 
     /**
-     * @dev See {Governor-_quorumReached}. In this module, only forVotes count toward the quorum.
+     * @dev See {Chancellor-_quorumReached}. In this module, only forVotes count toward the quorum.
      */
     function _quorumReached(uint256 proposalId)
         internal
@@ -309,7 +315,7 @@ abstract contract ChancelorCompatibilityBravo is
     }
 
     /**
-     * @dev See {Governor-_voteSucceeded}. In this module, the forVotes must be scritly over the againstVotes.
+     * @dev See {Chancellor-_voteSucceeded}. In this module, the forVotes must be scritly over the againstVotes.
      */
     function _voteSucceeded(uint256 proposalId)
         internal
@@ -323,7 +329,7 @@ abstract contract ChancelorCompatibilityBravo is
     }
 
     /**
-     * @dev See {Governor-_countVote}. In this module, the support follows Governor Bravo.
+     * @dev See {Chancellor-_countVote}. In this module, the support follows Governor Bravo.
      */
     function _countVote(
         uint256 proposalId,
@@ -337,7 +343,7 @@ abstract contract ChancelorCompatibilityBravo is
 
         require(
             !receipt.hasVoted,
-            "GovernorCompatibilityBravo: vote already cast"
+            "ChancellorCompatibilityBravo: vote already cast"
         );
         receipt.hasVoted = true;
         receipt.support = support;
@@ -350,7 +356,7 @@ abstract contract ChancelorCompatibilityBravo is
         } else if (support == uint8(VoteType.Abstain)) {
             details.abstainVotes += weight;
         } else {
-            revert("GovernorCompatibilityBravo: invalid vote type");
+            revert("ChancellorCompatibilityBravo: invalid vote type");
         }
     }
 }

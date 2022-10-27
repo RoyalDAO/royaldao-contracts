@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.5.0) (governance/utils/IVotes.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/utils/ISenatorVotes.sol)
+// Uses OpenZeppelin Contracts and Libraries
+
 pragma solidity ^0.8.0;
 
 /**
- * @dev Common interface for {ERC20Votes}, {ERC721Votes}, and other {Votes}-enabled contracts.
+ * @dev Common interface for {ERC721SenatorVotes}, and other {Votes}-enabled contracts.
  *
- * _Available since v4.5._
+ * _Available since v1.0._
  */
 interface ISenatorVotes {
+    /**
+     * @dev Emitted when senate address is set or changed.
+     */
+    event SenateChanged(address indexed oldSenate, address indexed newSenate);
     /**
      * @dev Emitted when an account changes their delegate.
      */
@@ -25,6 +31,18 @@ interface ISenatorVotes {
         uint256 previousBalance,
         uint256 newBalance
     );
+
+    enum membershipStatus {
+        NOT_MEMBER,
+        ACTIVE_MEMBER,
+        QUARANTINE_MEMBER,
+        BANNED_MEMBER
+    }
+
+    struct senateSnapshot {
+        address senator;
+        uint256 votes;
+    }
 
     /**
      * @dev Returns the current amount of votes that `account` has.
@@ -77,4 +95,17 @@ interface ISenatorVotes {
      * @dev Returns the senate address known by token.
      */
     function getSenateAddress() external view returns (address);
+
+    /**
+     * @dev Returns snapshot of senator votes
+     */
+    function getSenateSnapshot()
+        external
+        view
+        returns (senateSnapshot[] memory);
+
+    /**
+     * @dev Returns current voting suply
+     */
+    function getTotalSupply() external view returns (uint256);
 }

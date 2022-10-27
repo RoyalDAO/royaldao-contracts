@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.6.0) (governance/extensions/GovernorPreventLateQuorum.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/extensions/ChancellorPreventLateQuorum.sol)
+// Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
 
-import "../Chancelor.sol";
+import "../Chancellor.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
- * @dev A module that ensures there is a minimum voting period after quorum is reached. This prevents a large voter from
- * swaying a vote and triggering quorum at the last minute, by ensuring there is always time for other voters to react
- * and try to oppose the decision.
+ * @dev A module that ensures there is a minimum voting period after quorum is reached.
  *
- * If a vote causes quorum to be reached, the proposal's voting period may be extended so that it does not end before at
- * least a given number of blocks have passed (the "vote extension" parameter). This parameter can be set by the
- * governance executor (e.g. through a governance proposal).
+ * ChancellorPreventLateQuorum.sol modifies OpenZeppelin's GovernorPreventLateQuorum.sol:
+ * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/governance/extensions/GovernorPreventLateQuorum.sol
+ * GovernorPreventLateQuorum.sol source code copyright OpenZeppelin licensed under the MIT License.
+ * Modified by RoyalDAO.
  *
- * _Available since v4.5._
+ * _Available since v1.0._
  */
-abstract contract ChancelorPreventLateQuorum is Chancelor {
+abstract contract ChancellorPreventLateQuorum is Chancellor {
     using SafeCast for uint256;
     using Timers for Timers.BlockNumber;
 
@@ -43,8 +43,22 @@ abstract contract ChancelorPreventLateQuorum is Chancelor {
     }
 
     /**
+     * @dev Changes the {lateQuorumVoteExtension}. This operation can only be performed by the governance executor,
+     * generally through a governance proposal.
+     *
+     * Emits a {LateQuorumVoteExtensionSet} event.
+     */
+    function setLateQuorumVoteExtension(uint64 newVoteExtension)
+        public
+        virtual
+        onlyChancellor
+    {
+        _setLateQuorumVoteExtension(newVoteExtension);
+    }
+
+    /**
      * @dev Returns the proposal deadline, which may have been extended beyond that set at proposal creation, if the
-     * proposal reached quorum late in the voting period. See {Chancelor-proposalDeadline}.
+     * proposal reached quorum late in the voting period. See {Chancellor-proposalDeadline}.
      */
     function proposalDeadline(uint256 proposalId)
         public
@@ -61,8 +75,16 @@ abstract contract ChancelorPreventLateQuorum is Chancelor {
     }
 
     /**
+     * @dev Returns the current value of the vote extension parameter: the number of blocks that are required to pass
+     * from the time a proposal reaches quorum until its voting period ends.
+     */
+    function lateQuorumVoteExtension() public view virtual returns (uint64) {
+        return _voteExtension;
+    }
+
+    /**
      * @dev Casts a vote and detects if it caused quorum to be reached, potentially extending the voting period. See
-     * {Chancelor-_castVote}.
+     * {Chancellor-_castVote}.
      *
      * May emit a {ProposalExtended} event.
      */
@@ -97,28 +119,6 @@ abstract contract ChancelorPreventLateQuorum is Chancelor {
         }
 
         return result;
-    }
-
-    /**
-     * @dev Returns the current value of the vote extension parameter: the number of blocks that are required to pass
-     * from the time a proposal reaches quorum until its voting period ends.
-     */
-    function lateQuorumVoteExtension() public view virtual returns (uint64) {
-        return _voteExtension;
-    }
-
-    /**
-     * @dev Changes the {lateQuorumVoteExtension}. This operation can only be performed by the governance executor,
-     * generally through a governance proposal.
-     *
-     * Emits a {LateQuorumVoteExtensionSet} event.
-     */
-    function setLateQuorumVoteExtension(uint64 newVoteExtension)
-        public
-        virtual
-        onlyChancelor
-    {
-        _setLateQuorumVoteExtension(newVoteExtension);
     }
 
     /**

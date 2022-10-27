@@ -1,23 +1,21 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.5.0) (governance/extensions/GovernorVotesQuorumFraction.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/extensions/SenateVotesQuorumFraction.sol)
+// Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
 
-import "../Senate.sol";
-
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "../Senate.sol";
 import "../../Utils/Checkpoints.sol";
 
 /**
- * @dev Extension of {Chancelor} for voting weight extraction from an {ERC20Votes} token and a quorum expressed as a
+ * @dev Extension of {Senate} for voting weight extraction from an {ERC721SenatorVotes/ERC721Votes} token and a quorum expressed as a
  * fraction of the total supply.
  *
- * _Available since v4.3._
+ * _Available since v1.0._
  */
 abstract contract SenateVotesQuorumFraction is Senate {
     using Checkpoints for Checkpoints.History;
-    using EnumerableSet for EnumerableSet.AddressSet;
 
     uint256 private _quorumNumerator; // DEPRECATED
     Checkpoints.History private _quorumNumeratorHistory;
@@ -110,13 +108,13 @@ abstract contract SenateVotesQuorumFraction is Senate {
      *
      * Requirements:
      *
-     * - Must be called through a Chancelor proposal.
+     * - Must be called through a Chancellor proposal.
      * - New numerator must be smaller or equal to the denominator.
      */
     function updateQuorumNumerator(uint256 newQuorumNumerator)
         external
         virtual
-        onlyChancelor
+        onlyChancellor
     {
         _updateQuorumNumerator(newQuorumNumerator);
     }
@@ -136,7 +134,7 @@ abstract contract SenateVotesQuorumFraction is Senate {
     {
         require(
             newQuorumNumerator <= quorumDenominator(),
-            "ChancelorVotesQuorumFraction: quorumNumerator over quorumDenominator"
+            "ChancellorVotesQuorumFraction: quorumNumerator over quorumDenominator"
         );
 
         uint256 oldQuorumNumerator = quorumNumerator();

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.7.0) (governance/IGovernor.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/Senate.sol)
+// Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
 
@@ -8,11 +9,11 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 /**
  * @dev Interface of the {Senate} core.
  *
- * _Available since v4.3._
- * IChancelorUpgradeable.sol modifies OpenZeppelin's IGovernorUpgradeable.sol:
- * https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/master/contracts/governance/IGovernorUpgradeable.sol
- * IGovernorUpgradeable.sol source code copyright OpenZeppelin licensed under the MIT License.
- * Modified by QueenE DAO.
+ * _Available since v1.0._
+ * ISenate.sol is based on some functions from OpenZeppelin's IGovernor.sol and expands it for a more complex DAO access control:
+ * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/governance/IGovernor.sol
+ * IGovernor.sol source code copyright OpenZeppelin licensed under the MIT License.
+ * Modified by RoyalDAO.
  */
 abstract contract ISenate is IERC165 {
     enum membershipStatus {
@@ -22,17 +23,86 @@ abstract contract ISenate is IERC165 {
         BANNED_MEMBER
     }
 
+    enum senateSenatorStatus {
+        NOT_SENATOR,
+        ACTIVE_SENATOR,
+        QUARANTINE_SENATOR,
+        BANNED_SENATOR
+    }
+
     /**
      * @notice module:core
-     * @dev Name of the governor instance (used in building the ERC712 domain separator).
+     * @dev Open Senate with initial Members. Initial Members don't need to pass through Senate approval process. They are the founders members.
+     */
+    function openSenate(address[] memory _tokens) external virtual;
+
+    /**
+     * @dev Update Senate Voting Books.
+     */
+    function transferVotingUnits(
+        address from,
+        address to,
+        uint256 amount,
+        bool isSenator,
+        bool updateTotalSupply
+    ) external virtual;
+
+    /**
+     * @dev Check if all members from list are valid.
+     */
+    function validateMembers(bytes calldata members)
+        external
+        view
+        virtual
+        returns (bool);
+
+    /**
+     * @dev Check if senator is active and able to participate in the Senate.
+     */
+    function validateSenator(address senator)
+        external
+        view
+        virtual
+        returns (bool);
+
+    /**
+     * @dev Get the current senator representation list in bytes.
+     */
+    function getRepresentation(address account)
+        external
+        view
+        virtual
+        returns (bytes memory);
+
+    /**
+     * @notice module:core
+     * @dev Name of the senate instance (used in building the ERC712 domain separator).
      */
     function name() public view virtual returns (string memory);
 
     /**
      * @notice module:core
-     * @dev Version of the governor instance (used in building the ERC712 domain separator). Default: "1"
+     * @dev Version of the senate instance (used in building the ERC712 domain separator). Default: "1"
      */
     function version() public view virtual returns (string memory);
+
+    /**
+     * @dev get senate member status
+     */
+    function senateMemberStatus(address _tokenAddress)
+        public
+        view
+        virtual
+        returns (membershipStatus);
+
+    /**
+     * @dev get senator status
+     */
+    function senatorStatus(address _senator)
+        public
+        view
+        virtual
+        returns (senateSenatorStatus);
 
     /**
      * @notice module:user-config
@@ -58,13 +128,4 @@ abstract contract ISenate is IERC165 {
      * quorum depending on values such as the totalSupply of a token at this block (see {ERC20Votes}).
      */
     function quorum(uint256 blockNumber) public view virtual returns (uint256);
-
-    /**
-     * @dev Update Senate Voting Books.
-     */
-    function transferVotingUnits(
-        address from,
-        address to,
-        uint256 amount
-    ) external virtual;
 }
