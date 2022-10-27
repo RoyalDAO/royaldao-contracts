@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (governance/extensions/IGovernorTimelock.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/extensions/IChancellorSenate.sol)
 
 pragma solidity ^0.8.0;
 
 import "../IChancellor.sol";
 
 /**
- * @dev Extension of the {IChancellor} for timelock supporting modules.
+ * @dev Extension of the {IChancellor} for senate supporting modules.
  *
- * _Available since v4.3._
+ * _Available since v1.0._
  */
 abstract contract IChancellorSenate is IChancellor {
     /**

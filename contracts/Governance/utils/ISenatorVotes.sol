@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.5.0) (governance/utils/IVotes.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/utils/ISenatorVotes.sol)
+// Uses OpenZeppelin Contracts and Libraries
+
 pragma solidity ^0.8.0;
 
 /**
- * @dev Common interface for {ERC20Votes}, {ERC721Votes}, and other {Votes}-enabled contracts.
+ * @dev Common interface for {ERC721SenatorVotes}, and other {Votes}-enabled contracts.
  *
- * _Available since v4.5._
+ * _Available since v1.0._
  */
 interface ISenatorVotes {
     /**

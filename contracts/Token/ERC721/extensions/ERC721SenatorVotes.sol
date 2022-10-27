@@ -9,14 +9,19 @@ import "../../../Governance/utils/ISenatorVotes.sol";
 import "../../../Governance/ISenate.sol";
 
 /**
- * @dev Extension of ERC721 to support voting and delegation as implemented by {Votes}, where each individual NFT counts
+ * @dev Extension of Openzeppelin's {ERC721} to support voting and delegation as implemented by {SenatorVotes}, where each individual NFT counts
  * as 1 vote unit.
  *
- * Tokens do not count as votes until they are delegated, because votes must be tracked which incurs an additional cost
- * on every transfer. Token holders can either delegate to a trusted representative who will decide how to make use of
- * the votes in governance decisions, or they can delegate to themselves to be their own representative.
+ * ERC721SenatorVotes.sol modifies OpenZeppelin's ERC721Votes.sol:
+ * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/extensions/ERC721Votes.sol
+ * ERC721Votes.sol source code copyright OpenZeppelin licensed under the MIT License.
+ * Modified by RoyalDAO.
  *
- * _Available since v4.5._
+ * CHANGES: - Adapted to work with the {Senate}, informing support of {ISenatorVotes} interface so the senate can recognize 
+              the token voting control implementation type.
+            - Inheritage of SenatorVotes pattern
+            
+ * _Available since v1.0._
  */
 abstract contract ERC721SenatorVotes is ERC721, SenatorVotes {
     constructor(ISenate _senate) SenatorVotes(_senate) {}

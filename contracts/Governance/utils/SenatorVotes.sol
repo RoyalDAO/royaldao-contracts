@@ -14,21 +14,25 @@ import "../../Governance/ISenate.sol";
 import "../../Utils/Checkpoints.sol";
 
 /**
- * @dev This is a base abstract contract that tracks voting units from the diferent members of Senate (A.K.A Senate Books).
- * Senate Members must implements ERC721SenatorVotes/SenatorVotes or ERC721Votes/Votes extension that control its voting weigth.
+ * @dev Extension of ERC721 to support voting and delegation as implemented by {SenatorVotes}, where each individual NFT counts
+ * as 1 vote unit.
  *
- * see {ERC721SenatorVotes or ERC721Votes}
+ * Tokens do not count as votes until they are delegated, because votes must be tracked which incurs an additional cost
+ * on every transfer. Token holders can either delegate to a trusted representative who will decide how to make use of
+ * the votes in governance decisions, or they can delegate to themselves to be their own representative.
  *
- * ERC721SenatorVotes Implementers keeps the Senate Books updated whenever there is a shift in voting power.
- * For ERC721Votes Implementers, whenever needed, the Senate makes an external call to check the holder (A.K.A Senator) voting power
+ * SenatorVotes.sol modifies OpenZeppelin's Votes.sol:
+ * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/governance/utils/Votes.sol
+ * Votes.sol source code copyright OpenZeppelin licensed under the MIT License.
+ * Modified by RoyalDAO.
  *
+ * CHANGES: - Adapted to work with the {Senate}, sending an aditional move of delegated vote to the {Senate} that the token is part of (if any)
+ *          - Keeps a list of current senators (holders) to allow a full snapshot in the case of a late {Senate} Participation
+            - Allow the setup of senate and posible change of senate (senate leave and senate change scenarios)
  *
- * When using this module the derived contract must implement {_getVotingUnits} (for example, make it return
- * {ERC721-balanceOf}), and can use {_transferVotingUnits} to track a change in the distribution of those units (in the
- * previous example, it would be included in {ERC721-_beforeTokenTransfer}).
- *
- * _Available since v1._
+ * _Available since v1.0._
  */
+
 abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
     //TODO: test if runs with Governor
     //TODO: function to leave senate

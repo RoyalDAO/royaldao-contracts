@@ -1,14 +1,22 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.6.0) (governance/extensions/GovernorCountingSimple.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/extensions/ChancellorCountingSimple.sol)
+// Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
 
 import "../Chancellor.sol";
 
 /**
- * @dev Extension of {Governor} for simple, 3 options, vote counting.
+ * @dev Extension of {Chancellor} for simple, 3 options, vote counting.
  *
- * _Available since v4.3._
+ * ChancellorCountingSimple.sol modifies OpenZeppelin's GovernorCountingSimple.sol:
+ * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/governance/extensions/GovernorCountingSimple.sol
+ * GovernorCountingSimple.sol source code copyright OpenZeppelin licensed under the MIT License.
+ * Modified by RoyalDAO.
+ *
+ * CHANGES: Adapted to work with the Senate
+ *
+ * _Available since v1.0._
  */
 abstract contract ChancellorCountingSimple is Chancellor {
     /**
@@ -78,6 +86,35 @@ abstract contract ChancellorCountingSimple is Chancellor {
     }
 
     /**
+     * @dev See {Chancellor-_countVote}. In this module, the support follows the `VoteType` enum (from Governor Bravo).
+     */
+    function _countVote(
+        uint256 proposalId,
+        address account,
+        uint8 support,
+        uint256 weight,
+        bytes memory // params
+    ) internal virtual override {
+        ProposalVote storage proposalVote = _proposalVotes[proposalId];
+
+        require(
+            !proposalVote.hasVoted[account],
+            "ChancellorVotingSimple: vote already cast"
+        );
+        proposalVote.hasVoted[account] = true;
+
+        if (support == uint8(VoteType.Against)) {
+            proposalVote.againstVotes += weight;
+        } else if (support == uint8(VoteType.For)) {
+            proposalVote.forVotes += weight;
+        } else if (support == uint8(VoteType.Abstain)) {
+            proposalVote.abstainVotes += weight;
+        } else {
+            revert("ChancellorVotingSimple: invalid value for enum VoteType");
+        }
+    }
+
+    /**
      * @dev See {Chancellor-_quorumReached}.
      */
     function _quorumReached(uint256 proposalId)
@@ -107,34 +144,5 @@ abstract contract ChancellorCountingSimple is Chancellor {
         ProposalVote storage proposalVote = _proposalVotes[proposalId];
 
         return proposalVote.forVotes > proposalVote.againstVotes;
-    }
-
-    /**
-     * @dev See {Chancellor-_countVote}. In this module, the support follows the `VoteType` enum (from Governor Bravo).
-     */
-    function _countVote(
-        uint256 proposalId,
-        address account,
-        uint8 support,
-        uint256 weight,
-        bytes memory // params
-    ) internal virtual override {
-        ProposalVote storage proposalVote = _proposalVotes[proposalId];
-
-        require(
-            !proposalVote.hasVoted[account],
-            "ChancellorVotingSimple: vote already cast"
-        );
-        proposalVote.hasVoted[account] = true;
-
-        if (support == uint8(VoteType.Against)) {
-            proposalVote.againstVotes += weight;
-        } else if (support == uint8(VoteType.For)) {
-            proposalVote.forVotes += weight;
-        } else if (support == uint8(VoteType.Abstain)) {
-            proposalVote.abstainVotes += weight;
-        } else {
-            revert("ChancellorVotingSimple: invalid value for enum VoteType");
-        }
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.6.0) (governance/extensions/GovernorTimelockControl.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/extensions/ChancellorSenateControl.sol)
 
 pragma solidity ^0.8.0;
 
@@ -8,20 +8,10 @@ import "../Chancellor.sol";
 import "../Senate.sol";
 
 /**
- * @dev Extension of {Chancellor} that binds the execution process to an instance of {TimelockController}. This adds a
- * delay, enforced by the {TimelockController} to all successful proposal (in addition to the voting duration). The
- * {Chancellor} needs the proposer (and ideally the executor) roles for the {Chancellor} to work properly.
+ * @dev Extension of {Chancellor} that binds the DAO to an instance of {Senate}. This adds a
+ * new layer that controls the Members (tokens) that can participate in the DAO.
  *
- * Using this model means the proposal will be operated by the {TimelockController} and not by the {Chancellor}. Thus,
- * the assets and permissions must be attached to the {TimelockController}. Any asset sent to the {Chancellor} will be
- * inaccessible.
- *
- * WARNING: Setting up the TimelockController to have additional proposers besides the Chancellor is very risky, as it
- * grants them powers that they must be trusted or known not to use: 1) {onlyChancellor} functions like {relay} are
- * available to them through the timelock, and 2) approved Chancellor proposals can be blocked by them, effectively
- * executing a Denial of Service attack. This risk will be mitigated in a future release.
- *
- * _Available since v4.3._
+ * _Available since v1.0._
  */
 abstract contract ChancellorSenateControl is IChancellorSenate, Chancellor {
     Senate private _senate;
@@ -49,35 +39,39 @@ abstract contract ChancellorSenateControl is IChancellorSenate, Chancellor {
     }
 
     /**
-     * @dev Public accessor to check the address of the timelock
+     * @dev Public endpoint to update the underlying senate instance. Restricted to the DAO itself, so updates
+     * must be proposed, scheduled (if using a timelock control), and executed through Chancellor proposals.
+     *
+     * CAUTION: It is not recommended to change the senate while there are active proposals.
+     */
+    function updateSenate(Senate newSenate) external virtual onlyChancellor {
+        _updateSenate(newSenate);
+    }
+
+    /**
+     * @dev Public accessor to check the address of the senate
      */
     function senate() public view virtual override returns (address) {
         return address(_senate);
     }
 
     /**
-     * @dev Public endpoint to update the underlying timelock instance. Restricted to the timelock itself, so updates
-     * must be proposed, scheduled, and executed through Chancellor proposals.
-     *
-     * CAUTION: It is not recommended to change the timelock while there are other queued Chancellor proposals.
+     * @dev Public endpoint to retrieve voting delay from senate
      */
-    function updateSenate(Senate newSenate) external virtual onlyChancellor {
-        _updateSenate(newSenate);
-    }
-
-    function _updateSenate(Senate newSenate) private {
-        emit SenateChange(address(_senate), address(newSenate));
-        _senate = newSenate;
-    }
-
     function votingDelay() public view virtual override returns (uint256) {
         return _senate.votingDelay();
     }
 
+    /**
+     * @dev Public endpoint to retrieve voting period from senate
+     */
     function votingPeriod() public view virtual override returns (uint256) {
         return _senate.votingPeriod();
     }
 
+    /**
+     * @dev Public endpoint to retrieve quorum at given block from senate
+     */
     function quorum(uint256 blockNumber)
         public
         view
@@ -88,6 +82,9 @@ abstract contract ChancellorSenateControl is IChancellorSenate, Chancellor {
         return _senate.quorum(blockNumber);
     }
 
+    /**
+     * @dev Public endpoint to retrieve proposal Threshold from senate
+     */
     function proposalThreshold()
         public
         view
@@ -98,6 +95,11 @@ abstract contract ChancellorSenateControl is IChancellorSenate, Chancellor {
         return _senate.proposalThreshold();
     }
 
+    /**
+     * @dev Public endpoint to retrieve all configurations from senate in one single external call
+     *
+     * NOTE The function always checks the status of Senator and his Representation Members
+     */
     function getSettings()
         public
         view
@@ -117,7 +119,7 @@ abstract contract ChancellorSenateControl is IChancellorSenate, Chancellor {
     }
 
     /**
-     * Read the voting weight from the token's built in snapshot mechanism (see {Governor-_getVotes}).
+     * Read the voting weight from the senates's built in snapshot mechanism (see {Chancelor-_getVotes}).
      */
     function _getVotes(
         address account,
@@ -151,5 +153,16 @@ abstract contract ChancellorSenateControl is IChancellorSenate, Chancellor {
         returns (bool)
     {
         return _senate.validateSenator(senator);
+    }
+
+    /**
+     * @dev Private endpoint to update the underlying senate instance.
+     * @dev Emits SenateChange event
+     *
+     * CAUTION: It is not recommended to change the senate while there are active proposals.
+     */
+    function _updateSenate(Senate newSenate) private {
+        emit SenateChange(address(_senate), address(newSenate));
+        _senate = newSenate;
     }
 }

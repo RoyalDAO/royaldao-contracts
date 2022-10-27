@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (governance/compatibility/IGovernorCompatibilityBravo.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/extensions/IChancellorCompatibilityBravo.sol)
 
 pragma solidity ^0.8.0;
 
 import "../IChancellor.sol";
 
 /**
- * @dev Interface extension that adds missing functions to the {Governor} core to provide `GovernorBravo` compatibility.
+ * @dev Interface extension that adds missing functions to the {Chancellor} core to provide `GovernorBravo` compatibility.
  *
- * _Available since v4.3._
+ * _Available since v1.0._
  */
 abstract contract IChancellorCompatibilityBravo is IChancellor {
     /**

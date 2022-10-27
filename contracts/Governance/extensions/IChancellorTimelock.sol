@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (governance/extensions/IGovernorTimelock.sol)
+// RoyalDAO Contracts (last updated v1.0.0) (Governance/IChancellorTimelock.sol)
+// Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
 
