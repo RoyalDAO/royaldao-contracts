@@ -46,18 +46,18 @@ Once installed, you can use the contracts in the library by importing them:
 ```solidity
 pragma solidity ^0.8.0;
 
-import "@royaldao/contracts/Governance/Chancelor.sol";
+import "@royaldao/contracts/Governance/Chancellor.sol";
 
-contract RepublicChancelor is
-    Chancelor,
-    ChancelorCompatibilityBravo,
-    ChancelorSenateControl,
-    ChancelorTimelockControl
+contract RepublicChancellor is
+    Chancellor,
+    ChancellorCompatibilityBravo,
+    ChancellorSenateControl,
+    ChancellorTimelockControl
 {
     constructor(TimelockController _timelock, Senate _senate)
-        Chancelor("RepublicChancelor")
-        ChancelorSenateControl(_senate)
-        ChancelorTimelockControl(_timelock)
+        Chancellor("RepublicChancelor")
+        ChancellorSenateControl(_senate)
+        ChancellorTimelockControl(_timelock)
     {}
 }
 ```
