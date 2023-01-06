@@ -1,32 +1,16 @@
 {
-  "name": "@royaldao/royaldao-contracts",
-  "version": "1.0.1",
+  "name": "root",
   "description": "Contracts from RoyalDAO",
-  "repository": {
-    "url": "https://github.com/RoyalDAO/royaldao-contracts/",
-    "type": "git"
-  },
-  "keywords": [
-    "Governance",
-    "DAO",
-    "Senate",
-    "NFT"
-  ],
-  "homepage": "https://github.com/RoyalDAO/royaldao-contracts",
-  "bugs": "https://github.com/RoyalDAO/royaldao-contracts",
-  "files": [
-    "contracts/Governance/*.sol",
-    "contracts/Governance/compatibility/*.sol",
-    "contracts/Governance/extensions/*.sol",
-    "contracts/Governance/utils/*.sol",
-    "contracts/Token/ERC721/extensions/*.sol"
+  "workspaces": [
+    "contracts"
   ],
   "author": "Vin Rodrigues <rodrigues.mvinicius@gmail.com>",
   "license": "MIT",
   "scripts": {
     "dev:commit": "git add -A && git commit -m",
     "dev:my_branch": "dotenv -- cross-var git checkout -b %RELEASE_BRANCH%",
-    "dev:push": "dotenv -- cross-var git push origin %RELEASE_BRANCH%"
+    "dev:push": "dotenv -- cross-var git push origin %RELEASE_BRANCH%",
+    "publishPkg": "cd ./contracts && yarn npm publish --access public"
   },
   "dependencies": {
     "dotenv": "^16.0.2",
@@ -45,7 +29,6 @@
     "@openzeppelin/contracts": "^4.7.3",
     "@openzeppelin/contracts-upgradeable": "^4.7.3",
     "@openzeppelin/hardhat-upgrades": "^1.20.0",
-    "@royaldao/contracts-upgradeable": "^1.0.16",
     "@typechain/ethers-v5": "^10.1.0",
     "@typechain/hardhat": "^6.1.2",
     "@types/chai": "^4.2.0",

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// RoyalDAO Contracts (last updated v1.0.0) (Governance/Senate.sol)
+// RoyalDAO Contracts (last updated v1.1.1) (Governance/Senate.sol)
 // Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
@@ -21,7 +21,7 @@ import "../Utils/ArrayBytes.sol";
 /**
  * @dev Contract made to handle multiple tokens as members of the same DAO.
  *
- * _Available since v1._
+ * _Available since v1.1._
  *
  */
 //TODO: Senate member withdraw from senate
@@ -49,7 +49,7 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
     /**
      * @dev generator of sequential member ids.
      */
-    Counters.Counter private memberCounter;
+    Counters.Counter internal memberCounter;
 
     /**
      * @dev mappings to manage translation Member Address <--> Member Id.
