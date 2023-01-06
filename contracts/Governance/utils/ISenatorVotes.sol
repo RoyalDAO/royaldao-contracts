@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
-// RoyalDAO Contracts (last updated v1.0.0) (Governance/utils/ISenatorVotes.sol)
+// RoyalDAO Contracts (last updated v1.1.2) (Governance/utils/ISenatorVotes.sol)
 // Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
+
+import "../ISenate.sol";
 
 /**
  * @dev Common interface for {ERC721SenatorVotes}, and other {Votes}-enabled contracts.
@@ -108,4 +110,9 @@ interface ISenatorVotes {
      * @dev Returns current voting suply
      */
     function getTotalSupply() external view returns (uint256);
+
+    /**
+     * @dev Set senate address.
+     */
+    function setSenate(ISenate _senate) external;
 }
