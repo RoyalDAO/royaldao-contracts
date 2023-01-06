@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// RoyalDAO Contracts (last updated v1.0.0) (Governance/utils/SenatorVotes.sol)
+// RoyalDAO Contracts (last updated v1.1.2) (Governance/utils/SenatorVotes.sol)
 // Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
@@ -34,8 +34,6 @@ import "../../Utils/Checkpoints.sol";
  */
 
 abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
-    //TODO: test if runs with Governor
-    //TODO: function to leave senate
     using EnumerableSet for EnumerableSet.AddressSet;
     using Strings for uint256;
 

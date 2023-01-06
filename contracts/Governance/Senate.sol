@@ -392,9 +392,12 @@ abstract contract Senate is Context, ERC165, EIP712, ISenate {
                 memberId[_token] = SafeCast.toUint32(memberCounter.current());
                 idMember[SafeCast.toUint32(memberCounter.current())] = _token;
 
-                tokens.add(_token);
                 //must sync senate books
                 writeMemberToSenateBooks(_token);
+                //set senate to new member
+                ISenatorVotes(_token).setSenate(this);
+                //add New Member to Senate List of Members
+                tokens.add(_token);
             }
         } else if (
             IERC165(_token).supportsInterface(type(IVotes).interfaceId)
