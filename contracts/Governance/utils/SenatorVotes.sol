@@ -254,8 +254,7 @@ abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
                 (uint256 oldValue, uint256 newValue) = _delegateCheckpoints[to]
                     .push(_add, amount);
 
-                if (!senators.contains(from) && newValue > 0)
-                    senators.add(from);
+                if (!senators.contains(to) && newValue > 0) senators.add(to);
 
                 emit DelegateVotesChanged(to, oldValue, newValue);
             }
