@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// RoyalDAO Contracts (last updated v1.0.0) (Governance/Senate.sol)
+// RoyalDAO Contracts (last updated v1.1.4) (Governance/ISenate.sol)
 // Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
@@ -16,6 +16,8 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * Modified by RoyalDAO.
  */
 abstract contract ISenate is IERC165 {
+    event MemberAcceptance(address member, address approveExecutor);
+
     enum membershipStatus {
         NOT_MEMBER,
         ACTIVE_MEMBER,
@@ -50,29 +52,23 @@ abstract contract ISenate is IERC165 {
     /**
      * @dev Check if all members from list are valid.
      */
-    function validateMembers(bytes calldata members)
-        external
-        view
-        virtual
-        returns (bool);
+    function validateMembers(
+        bytes calldata members
+    ) external view virtual returns (bool);
 
     /**
      * @dev Check if senator is active and able to participate in the Senate.
      */
-    function validateSenator(address senator)
-        external
-        view
-        virtual
-        returns (bool);
+    function validateSenator(
+        address senator
+    ) external view virtual returns (bool);
 
     /**
      * @dev Get the current senator representation list in bytes.
      */
-    function getRepresentation(address account)
-        external
-        view
-        virtual
-        returns (bytes memory);
+    function getRepresentation(
+        address account
+    ) external view virtual returns (bytes memory);
 
     /**
      * @notice module:core
@@ -89,20 +85,16 @@ abstract contract ISenate is IERC165 {
     /**
      * @dev get senate member status
      */
-    function senateMemberStatus(address _tokenAddress)
-        public
-        view
-        virtual
-        returns (membershipStatus);
+    function senateMemberStatus(
+        address _tokenAddress
+    ) public view virtual returns (membershipStatus);
 
     /**
      * @dev get senator status
      */
-    function senatorStatus(address _senator)
-        public
-        view
-        virtual
-        returns (senateSenatorStatus);
+    function senatorStatus(
+        address _senator
+    ) public view virtual returns (senateSenatorStatus);
 
     /**
      * @notice module:user-config

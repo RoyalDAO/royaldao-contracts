@@ -10,7 +10,10 @@
     "dev:commit": "git add -A && git commit -m",
     "dev:my_branch": "dotenv -- cross-var git checkout -b %RELEASE_BRANCH%",
     "dev:push": "dotenv -- cross-var git push origin %RELEASE_BRANCH%",
-    "publishPkg": "cd ./contracts && yarn npm publish --access public"
+    "publishPkg": "cd ./contracts && yarn npm publish --access public",
+    "hh-deploy": "yarn hardhat deploy",
+    "hh-compile": "yarn hardhat compile --force",
+    "hh-test": "yarn hardhat test"    
   },
   "dependencies": {
     "dotenv": "^16.0.2",
