@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// RoyalDAO Contracts (last updated v1.1.2) (Governance/utils/SenatorVotes.sol)
+// RoyalDAO Contracts (last updated v1.1.4) (Governance/utils/SenatorVotes.sol)
 // Uses OpenZeppelin Contracts and Libraries
 
 pragma solidity ^0.8.0;
@@ -342,10 +342,9 @@ abstract contract SenatorVotes is ISenatorVotes, Context, EIP712 {
 
     /**
      * @dev Set senate address.
+     * @dev Must implement with access control
      */
-    function setSenate(ISenate _senate) external virtual {
-        _setSenate(_senate);
-    }
+    function setSenate(ISenate _senate) external virtual;
 
     /**
      * @dev Set senate address.
